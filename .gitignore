@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+.venv/
+__pycache__/
+ml-service/__pycache__/
+*.pyc
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Build output
+dist/
+frontend/dist/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ML artifacts
+ml-service/*.pkl
+!ml-service/model.pkl

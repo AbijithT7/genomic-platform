@@ -1,0 +1,46 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Patient {
+  id        String    @id @default(uuid())
+  filename  String
+  date      DateTime  @default(now())
+  variants  Variant[]
+
+  @@map("patients")
+}
+
+model Variant {
+  id        String    @id @default(uuid())
+  patientId String
+  patient   Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  chrom     String
+  pos       Int
+  ref       String
+  alt       String
+  qual      Float?
+  status    String    @default("pending")
+  evidence  Evidence?
+
+  @@map("variants")
+}
+
+model Evidence {
+  id                 String  @id @default(uuid())
+  variantId          String  @unique
+  variant            Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  frequency          Float
+  conservation_score Float
+  ml_score           Float
+  clinvar_status     String?
+  disease            String?
+  shap_explanation   String
+
+  @@map("evidence")
+}

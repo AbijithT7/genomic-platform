@@ -1,0 +1,20 @@
+##fileformat=VCFv4.2
+##fileDate=20260818
+##source=SmartIndiaHackathonGenomicEngine_v2.0
+##reference=GRCh38/hg38
+##FILTER=<ID=PASS,Description="All filters passed">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency in gnomAD / 1000 Genomes">
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Approximate Read Depth">
+##INFO=<ID=GENE,Number=1,Type=String,Description="Associated Gene Symbol">
+##INFO=<ID=CLNSIG,Number=.,Type=String,Description="ClinVar Clinical Significance">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chr1	11873	rs1801133	G	A	99.0	PASS	AF=0.45;DP=120;CLNSIG=Benign
+chr1	69511	rs1800562	A	G	95.0	PASS	AF=0.38;DP=115;CLNSIG=Benign
+chr1	876499	rs75377567	A	G	99.5	PASS	AF=0.42;DP=130;CLNSIG=Benign
+chr1	925952	rs9442372	G	A	85.0	PASS	AF=0.28;DP=100;CLNSIG=Benign
+chr2	27468131	rs1801131	T	G	90.0	PASS	AF=0.35;DP=110;CLNSIG=Benign
+chr2	47630206	rs6725887	C	T	92.5	PASS	AF=0.51;DP=140;CLNSIG=Benign
+chr2	136608646	rs4988235	C	T	98.0	PASS	AF=0.68;DP=150;CLNSIG=Benign
+chr2	217436034	rs1333049	G	C	88.0	PASS	AF=0.47;DP=105;CLNSIG=Benign
+chr7	140453136	rs121913527	A	T	100.0	PASS	AF=0.00000398;DP=250;GENE=BRAF;CLNSIG=Pathogenic
+chr17	43044295	rs80357906	G	A	99.0	PASS	AF=0.00003;DP=200;GENE=BRCA1;CLNSIG=Pathogenic
