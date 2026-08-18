@@ -1,6 +1,16 @@
 # Genomic Variant Interpretation Platform
 
-An end-to-end fullstack platform for genomic variant interpretation, combining stream-based VCF ingestion, MyVariant.info annotations, Random Forest ML pathogenicity predictions, and an editorial dark mode React dashboard.
+An end-to-end fullstack clinical genomics platform for genomic variant interpretation, combining stream-based VCF ingestion, multi-assembly MyVariant.info & ClinVar annotations, Random Forest ML pathogenicity predictions with SHAP explanations, disease/condition mapping, and an interactive React dashboard with clinical PDF report export.
+
+---
+
+## 👥 Authors & Contributors
+
+Developed by students from **Vellore Institute of Technology (VIT), Chennai**:
+
+- **Abijith Thennarasu** — *Vellore Institute of Technology (VIT), Chennai*
+- **Alvin Binoy** — *Vellore Institute of Technology (VIT), Chennai*
+- **Caleb KG** — *Vellore Institute of Technology (VIT), Chennai*
 
 ---
 
@@ -11,18 +21,34 @@ An end-to-end fullstack platform for genomic variant interpretation, combining s
    │
    ├── 1. POST /api/upload (VCF drag-and-drop) ───> [Node.js Express Server (Port 3001)]
    │                                                 ├── Stream-parses VCF line-by-line (services/vcfParser.js)
+   │                                                 ├── Parses rsIDs, INFO tags (GENE, CLNDN, CLNSIG, AF)
    │                                                 ├── Creates Patient record & bulk-inserts Variants into SQLite
    │                                                 └── Returns { patientId, filename, totalVariants, patient }
    │
    ├── 2. POST /api/analyze/:patientId ──────────> [Node.js Express Server (Port 3001)]
-   │                                                 ├── Queries MyVariant.info for gnomAD AF, CADD, ClinVar
+   │                                                 ├── Queries MyVariant.info across hg19 & hg38 assemblies
+   │                                                 ├── Extracts ClinVar, UniProt HumsaVar, CIViC, COSMIC & Gene-Disease data
    │                                                 ├── Batches features to Python ML Service
    │                                                 │     └── POST /predict (Port 8000) -> { ml_score, shap_explanation }
-   │                                                 ├── Upserts Evidence records in SQLite
+   │                                                 ├── Upserts Evidence & Associated Condition records in SQLite
    │                                                 └── Classifies Variant status (Pathogenic, Benign, VUS)
    │
-   └── 3. Interactive Variant Table & Evidence Drawer
+   └── 3. Interactive Clinical Dashboard & PDF Report
+         ├── Filter & sort variants by Pathogenicity & ML score
+         ├── Associated Condition & disease phenotype presentation
+         ├── Slide-in Evidence Drawer with SHAP interpretability
+         └── Automated Clinical PDF Review Report generation
 ```
+
+---
+
+## ✨ Key Features
+
+- **Stream-Based VCF Parser**: Memory-safe line-by-line VCF parsing supporting large genomic files, rsIDs, and INFO clinical annotations.
+- **Multi-Assembly & Multi-Source Annotation**: Automated resolution across hg19 & hg38 assemblies via MyVariant.info, ClinVar, UniProt HumsaVar, CIViC, and COSMIC.
+- **Curated Gene-Disease Knowledge Base**: Clinical disease associations for major actionable and ACMG genes (e.g., *BRAF*, *BRCA1*, *BRCA2*, *TP53*, *KRAS*, *EGFR*, *PIK3CA*, *HFE*, *CFTR*, *MTHFR*).
+- **ML Pathogenicity Scoring & SHAP Explanations**: Random Forest classifier trained on CADD deleteriousness and population allele frequencies with explainable AI summaries.
+- **Clinical Review Report Export**: Formatted PDF export summarizing patient findings, risk statistics, classifications, and associated conditions.
 
 ---
 
@@ -62,7 +88,7 @@ Open **http://localhost:5173** in your browser.
 
 - **`Patient`**: `id`, `filename`, `date`, `variants[]`
 - **`Variant`**: `id`, `patientId`, `chrom`, `pos`, `ref`, `alt`, `qual`, `status`, `evidence?`
-- **`Evidence`**: `id`, `variantId`, `frequency`, `conservation_score`, `ml_score`, `shap_explanation`
+- **`Evidence`**: `id`, `variantId`, `frequency`, `conservation_score`, `ml_score`, `clinvar_status`, `disease`, `shap_explanation`
 
 ---
 
@@ -86,3 +112,4 @@ Open **http://localhost:5173** in your browser.
 |---|---|---|
 | `GET` | `/health` | Model status & feature schema metadata |
 | `POST` | `/predict` | Evaluates feature batch `[{ allele_frequency, cadd_score }]` returning `ml_score` and `shap_explanation` |
+
