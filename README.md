@@ -4,7 +4,7 @@ An end-to-end fullstack clinical genomics platform for genomic variant interpret
 
 ---
 
-## 👥 Authors & Contributors
+## Authors & Contributors
 
 Developed by students from **Vellore Institute of Technology (VIT), Chennai**:
 
@@ -14,7 +14,7 @@ Developed by students from **Vellore Institute of Technology (VIT), Chennai**:
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
 [React Vite Frontend (Port 5173)]
@@ -52,7 +52,7 @@ Developed by students from **Vellore Institute of Technology (VIT), Chennai**:
 
 ---
 
-## 🚀 Quick Start Guide
+## Quick Start Guide
 
 ### 1. Start the Python ML Prediction Service (Port 8000)
 ```bash
@@ -84,7 +84,7 @@ Open **http://localhost:5173** in your browser.
 
 ---
 
-## 🗄️ Database Models (`backend/prisma/schema.prisma`)
+## Database Models (`backend/prisma/schema.prisma`)
 
 - **`Patient`**: `id`, `filename`, `date`, `variants[]`
 - **`Variant`**: `id`, `patientId`, `chrom`, `pos`, `ref`, `alt`, `qual`, `status`, `evidence?`
@@ -92,7 +92,7 @@ Open **http://localhost:5173** in your browser.
 
 ---
 
-## 📡 API Directory
+## API Directory
 
 ### Node.js Backend (`http://localhost:3001`)
 | Method | Endpoint | Description |
