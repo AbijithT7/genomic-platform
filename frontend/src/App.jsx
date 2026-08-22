@@ -8,6 +8,10 @@ import {
   Trash2,
   Sun,
   Moon,
+  Stethoscope,
+  Activity,
+  Microscope,
+  HeartPulse,
 } from "lucide-react";
 import FileUpload from "./components/FileUpload";
 import VariantTable from "./components/VariantTable";
@@ -205,12 +209,14 @@ export default function App() {
         <div className="max-w-[96rem] mx-auto flex flex-col items-center gap-2">
           <div className="flex items-center justify-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-300 to-teal-500 flex items-center justify-center text-[#082322] shadow-lg shadow-teal-500/25">
-              <Dna size={23} />
+              <Dna size={16} className="mr-1" />
+              <Stethoscope size={16} className="ml-1" />
             </div>
             <div>
               <span className={`font-mono text-[15px] md:text-[17px] font-medium uppercase tracking-[0.12em] ${theme === "dark" ? "text-white" : "text-[#183334]"}`}>
+              <HeartPulse size={16} className="mr-1" />
                 Genomic Variant Interpretation Platform
-              </span>
+            </span>
             </div>
           </div>
 

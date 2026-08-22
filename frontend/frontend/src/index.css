@@ -1,0 +1,278 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+/* ─── Base theme ─── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background-color: #0c1718;
+    color: #d9e3e0;
+  }
+
+  body {
+    margin: 0;
+    font-family:
+      "Plus Jakarta Sans",
+      system-ui,
+      -apple-system,
+      sans-serif;
+    background-color: #0c1718;
+    color: #d9e3e0;
+    line-height: 1.5;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: #f4f6f3;
+    font-family: "Newsreader", Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.035em;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0c1718;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #294042;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3c5c5e;
+  }
+
+  ::selection {
+    background: rgba(45, 212, 191, 0.3);
+    color: #f4f6f3;
+  }
+
+  .theme-light {
+    background-color: #e9f2ef;
+    background-image: radial-gradient(circle at 88% 8%, rgba(45, 212, 191, .17), transparent 28rem), radial-gradient(circle at 8% 35%, rgba(13, 148, 136, .08), transparent 24rem);
+    color: #193233;
+  }
+
+  .theme-light h1,
+  .theme-light h2,
+  .theme-light h3,
+  .theme-light h4,
+  .theme-light h5,
+  .theme-light h6 {
+    color: #183334;
+  }
+}
+
+/* ─── Component styles ─── */
+@layer components {
+  .surface-card {
+    background-color: #112326;
+    border: 1px solid #284144;
+    border-radius: 16px;
+  }
+
+  .theme-light .surface-card {
+    background-color: rgba(255, 255, 252, .88);
+    border-color: #c7d9d3;
+    box-shadow: 0 14px 34px rgba(27, 73, 69, .08);
+  }
+
+  .surface-card-hover {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .surface-card-hover:hover {
+    border-color: #4d7677;
+  }
+
+  /* Status Badges */
+  .badge-pathogenic {
+    background-color: rgba(249, 115, 22, 0.12);
+    color: #fb923c;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+  }
+
+  .badge-benign {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+
+  .badge-vus {
+    background-color: rgba(245, 158, 11, 0.12);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+  }
+
+  .badge-pending {
+    background-color: rgba(63, 63, 70, 0.4);
+    color: #a1a1aa;
+    border: 1px solid rgba(63, 63, 70, 0.6);
+  }
+
+  .theme-light .badge-benign {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border-color: rgba(4, 120, 87, 0.25);
+  }
+
+  .theme-light .badge-vus {
+    background-color: rgba(245, 158, 11, 0.14);
+    color: #b45309;
+    border-color: rgba(180, 83, 9, 0.3);
+  }
+
+  .theme-light .badge-pathogenic {
+    background-color: rgba(194, 65, 12, 0.12);
+    color: #9a3412;
+    border-color: rgba(154, 52, 18, 0.3);
+  }
+
+  /* Primary actions */
+  .btn-highlight {
+    background-color: #14b8a6;
+    color: #07201f;
+    font-weight: 600;
+    transition: all 0.15s ease-in-out;
+  }
+  .btn-highlight:hover:not(:disabled) {
+    background-color: #5eead4;
+    box-shadow: 0 10px 25px rgba(20, 184, 166, 0.25);
+  }
+  .btn-highlight:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background-color: #27272a;
+    color: #e4e4e7;
+    border: 1px solid #3f3f46;
+    transition: all 0.15s ease-in-out;
+  }
+  .btn-secondary:hover {
+    background-color: #3f3f46;
+    color: #ffffff;
+  }
+}
+
+/* ─── Animations ─── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes heroPan {
+  from {
+    transform: scale(1.02) translateX(-2%);
+  }
+  to {
+    transform: scale(1.12) translateX(2%);
+  }
+}
+
+@keyframes signalSweep {
+  0% { transform: translateX(-115%) skewX(-18deg); opacity: 0; }
+  12% { opacity: .75; }
+  55% { opacity: .35; }
+  100% { transform: translateX(290%) skewX(-18deg); opacity: 0; }
+}
+
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes floatSlow {
+  0% {
+    transform: translateY(0px) translateX(0px);
+  }
+  100% {
+    transform: translateY(-18px) translateX(10px);
+  }
+}
+
+@keyframes floatFast {
+  0% {
+    transform: translateY(0px) translateX(0px);
+  }
+  100% {
+    transform: translateY(14px) translateX(-8px);
+  }
+}
+
+.animate-fade-in {
+  animation: revealUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-drawer-in {
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-hero-pan {
+  animation: heroPan 12s ease-in-out infinite alternate;
+}
+
+.animate-float-slow {
+  animation: floatSlow 3.6s ease-in-out infinite alternate;
+}
+
+.animate-float-fast {
+  animation: floatFast 2.3s ease-in-out infinite alternate;
+}
+
+.signal-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 32%;
+  background: linear-gradient(90deg, transparent, rgba(94, 234, 212, .34), transparent);
+  animation: signalSweep 4.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.clinical-grid {
+  background-image: linear-gradient(rgba(94, 234, 212, .07) 1px, transparent 1px), linear-gradient(90deg, rgba(94, 234, 212, .07) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+.theme-light .clinical-grid {
+  background-image: linear-gradient(rgba(13, 148, 136, .08) 1px, transparent 1px), linear-gradient(90deg, rgba(13, 148, 136, .08) 1px, transparent 1px);
+}
+
+.theme-light .badge-pending { background: #e2ece8; color: #52706c; border-color: #c9d9d4; }
+
+.font-mono { font-family: "DM Mono", ui-monospace, monospace; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}
