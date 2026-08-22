@@ -224,7 +224,7 @@ export default function FileUpload({ onUploadSuccess, theme = "dark" }) {
       )}
 
       {/* Sample VCF download link */}
-      <div className="mt-4 flex items-center justify-between text-xs ${theme === "dark" ? "text-zinc-500" : "text-stone-500"}"}>
+      <div className={`mt-4 flex items-center justify-between text-xs ${theme === "dark" ? "text-zinc-500" : "text-stone-500"}`}>
         <span>Need a demo file to try?</span>
         <button
           type="button"
