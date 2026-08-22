@@ -222,6 +222,52 @@ export default function FileUpload({ onUploadSuccess, theme = "dark" }) {
           <span>{error}</span>
         </div>
       )}
+
+      {/* Sample VCF download link */}
+      <div className="mt-4 flex items-center justify-between text-xs ${theme === "dark" ? "text-zinc-500" : "text-stone-500"}"}>
+        <span>Need a demo file to try?</span>
+        <button
+          type="button"
+          onClick={downloadSampleVcf}
+          className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border transition-colors ${theme === "dark" ? "border-zinc-800 hover:border-zinc-700 text-zinc-300" : "border-stone-200 hover:border-stone-300 text-stone-600"}`}
+        >
+          <Download size={12} />
+          Download sample VCF
+        </button>
+      </div>
     </div>
   );
 }
+
+function downloadSampleVcf() {
+  const blob = new Blob([SAMPLE_VCF_CONTENT], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "sample-variants.vcf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+const SAMPLE_VCF_CONTENT = `##fileformat=VCFv4.2
+##source=GenoLabTest
+##reference=GRCh38
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=AF,Number=1,Type=Float,Description="Allele Frequency">
+##contig=<ID=chr1,length=248956422>
+##contig=<ID=chr7,length=159345973>
+##contig=<ID=chr17,length=83257441>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chr1	10019	rs1234	A	G	99	PASS	GENE=BRCA1;AF=0.0001
+chr7	140453136	rs113488022	A	T	99	PASS	GENE=BRAF;AF=0.00001
+chr7	117559590	rs121913529	T	C	99	PASS	GENE=EGFR;AF=0.0001
+chr17	43094464	rs80357906	A	G	99	PASS	GENE=BRCA1;AF=0.0001
+chr17	7674220	rs80359550	T	C	99	PASS	GENE=TP53;AF=0.00001
+chr1	150551945	rs121909218	T	G	99	PASS	GENE=LMNA;AF=0.0001
+chr7	92170277	rs113993960	G	A	99	PASS	GENE=CFTR;AF=0.002
+chr1	216369765	rs121913530	C	T	99	PASS	GENE=USH2A;AF=0.0001
+chr17	43092075	rs80357713	T	A	99	PASS	GENE=BRCA1;AF=0.00001
+chr5	112839514	rs121434416	C	T	99	PASS	GENE=APC;AF=0.0001
+`;
