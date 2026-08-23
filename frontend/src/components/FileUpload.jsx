@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import {
   Upload,
+  Download,
   FileCheck,
   AlertCircle,
   X,
