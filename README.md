@@ -23,7 +23,7 @@ Developed by students from **Vellore Institute of Technology (VIT), Chennai**:
 
 - **Abijith Thennarasu** — Vellore Institute of Technology (VIT), Chennai
 - **Alvin Binoy** — Vellore Institute of Technology (VIT), Chennai
-- **Caleb KG** — Vellore Institute of Technology (VIT), Chennai
+- **Caleb Kurian George** — Vellore Institute of Technology (VIT), Chennai
 
 ---
 
