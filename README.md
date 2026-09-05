@@ -173,7 +173,4 @@ Defined in `backend/prisma/schema.prisma`:
 
 ---
 
-## Author
 
-**Abijith Thennarasu**
-Vellore Institute of Technology, Chennai
