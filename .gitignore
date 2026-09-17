@@ -3,6 +3,7 @@ node_modules/
 backend/node_modules/
 frontend/node_modules/
 .venv/
+.venv-1/
 __pycache__/
 ml-service/__pycache__/
 *.pyc
@@ -32,6 +33,20 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 
+# Tooling & Telemetry
+.impeccable/
+googlecloudtools.datacloud_telemetry/
+*.log
+
 # ML artifacts
 ml-service/*.pkl
 !ml-service/model.pkl
+
+# Ignore heavy data and models directories but keep lightweight essential datasets & .gitkeep
+ml-service/data/*
+!ml-service/data/.gitkeep
+!ml-service/data/model_training_data.csv
+!ml-service/data/cadd_results.tsv.gz
+ml-service/models/*
+!ml-service/models/.gitkeep
+

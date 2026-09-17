@@ -6,7 +6,7 @@ const readline = require('readline');
  */
 function parseInfoField(infoStr) {
   if (!infoStr || infoStr === '.' || typeof infoStr !== 'string') {
-    return { gene: null, disease: null, clinvar_status: null, af: null };
+    return { gene: null, disease: null, clinvar_status: null, af: null, cadd: null };
   }
 
   const result = {
@@ -14,7 +14,11 @@ function parseInfoField(infoStr) {
     disease: null,
     clinvar_status: null,
     af: null,
+    cadd: null,
   };
+
+  let rawAc = null;
+  let rawAn = null;
 
   const parts = infoStr.split(';');
   for (const part of parts) {
@@ -33,9 +37,27 @@ function parseInfoField(infoStr) {
       }
     } else if ((key === 'CLNSIG' || key === 'CLINVAR' || key === 'SIGNIFICANCE') && !result.clinvar_status) {
       result.clinvar_status = val.replace(/_/g, ' ');
-    } else if ((key === 'AF' || key === 'GNOMAD_AF' || key === 'AF_EXOME') && result.af === null) {
-      const parsedAf = parseFloat(val);
+    } else if ((key === 'AF' || key === 'GNOMAD_AF' || key === 'AF_EXOME' || key === '1000G_AF' || key === 'EUR_AF' || key === 'AF_POPMAX' || key === 'MAX_AF') && result.af === null) {
+      const firstAf = val.split(',')[0].trim();
+      const parsedAf = parseFloat(firstAf);
       if (!isNaN(parsedAf)) result.af = parsedAf;
+    } else if (key === 'AC' && rawAc === null) {
+      rawAc = val.split(',')[0].trim();
+    } else if (key === 'AN' && rawAn === null) {
+      rawAn = val.trim();
+    } else if ((key === 'CADD' || key === 'CADD_PHRED' || key === 'CADD_SCORE' || key === 'CADDR' || key === 'CADDRAW') && result.cadd === null) {
+      const firstCadd = val.split(',')[0].trim();
+      const parsedCadd = parseFloat(firstCadd);
+      if (!isNaN(parsedCadd)) result.cadd = parsedCadd;
+    }
+  }
+
+  // If explicit AF was not found, compute from AC/AN if available
+  if (result.af === null && rawAc !== null && rawAn !== null) {
+    const acNum = parseFloat(rawAc);
+    const anNum = parseFloat(rawAn);
+    if (!isNaN(acNum) && !isNaN(anNum) && anNum > 0) {
+      result.af = acNum / anNum;
     }
   }
 
@@ -43,12 +65,23 @@ function parseInfoField(infoStr) {
 }
 
 /**
+ * Normalizes genome build string into standard tokens: 'hg19', 'hg38', or 'hg18'
+ */
+function normalizeGenomeBuild(buildStr) {
+  if (!buildStr || typeof buildStr !== 'string') return 'hg19';
+  const lower = buildStr.toLowerCase();
+  if (lower.includes('38') || lower.includes('grch38')) return 'hg38';
+  if (lower.includes('36') || lower.includes('hg18') || lower.includes('ncbi36')) return 'hg18';
+  return 'hg19';
+}
+
+/**
  * Stream-based local VCF parser using native fs and readline modules.
  * Reads the VCF file line by line for memory safety and extracts
- * genomic coordinates, reference/alternate alleles, rsIDs, and INFO clinical annotations.
+ * genome reference build, coordinates, alleles, rsIDs, and INFO clinical annotations.
  *
  * @param {string} filePath - Absolute or relative path to the .vcf file
- * @returns {Promise<Array<{ chrom: string, pos: number, ref: string, alt: string, qual: number|null, rsid: string|null, gene: string|null, disease: string|null, clinvar_status: string|null, af: number|null }>>}
+ * @returns {Promise<Array<{ chrom: string, pos: number, ref: string, alt: string, qual: number|null, rsid: string|null, gene: string|null, disease: string|null, clinvar_status: string|null, af: number|null, cadd: number|null }>>}
  */
 function parseVCF(filePath) {
   return new Promise((resolve, reject) => {
@@ -57,6 +90,7 @@ function parseVCF(filePath) {
     }
 
     const variants = [];
+    let detectedReference = 'hg19';
     const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' });
 
     fileStream.on('error', (err) => {
@@ -71,7 +105,16 @@ function parseVCF(filePath) {
     rl.on('line', (line) => {
       const trimmed = line.trim();
 
-      // Skip empty lines and comment/header lines starting with '#'
+      // Check header lines for genome reference metadata
+      if (trimmed.startsWith('##')) {
+        const refMatch = trimmed.match(/^##(?:reference|assembly|source)=([^\r\n]+)/i);
+        if (refMatch && refMatch[1]) {
+          detectedReference = normalizeGenomeBuild(refMatch[1]);
+        }
+        return;
+      }
+
+      // Skip table header line starting with '#'
       if (!trimmed || trimmed.startsWith('#')) {
         return;
       }
@@ -123,11 +166,14 @@ function parseVCF(filePath) {
           disease: infoData.disease,
           clinvar_status: infoData.clinvar_status,
           af: infoData.af,
+          cadd: infoData.cadd,
+          referenceBuild: detectedReference,
         });
       }
     });
 
     rl.on('close', () => {
+      variants.referenceBuild = detectedReference;
       resolve(variants);
     });
 
@@ -141,5 +187,6 @@ module.exports = {
   parseVCF,
   parseVcf: parseVCF, // alias for convenience
   parseInfoField,
+  normalizeGenomeBuild,
 };
 

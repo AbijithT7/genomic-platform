@@ -17,16 +17,19 @@ model Patient {
 }
 
 model Variant {
-  id        String    @id @default(uuid())
-  patientId String
-  patient   Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  chrom     String
-  pos       Int
-  ref       String
-  alt       String
-  qual      Float?
-  status    String    @default("pending")
-  evidence  Evidence?
+  id          String    @id @default(uuid())
+  patientId   String
+  patient     Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  chrom       String
+  pos         Int
+  ref         String
+  alt         String
+  qual        Float?
+  rsid        String?
+  gene        String?
+  genomeBuild String?
+  status      String    @default("pending")
+  evidence    Evidence?
 
   @@map("variants")
 }
@@ -35,9 +38,9 @@ model Evidence {
   id                 String  @id @default(uuid())
   variantId          String  @unique
   variant            Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  frequency          Float
-  conservation_score Float
-  ml_score           Float
+  frequency          Float?
+  conservation_score Float?
+  ml_score           Float?
   clinvar_status     String?
   disease            String?
   shap_explanation   String

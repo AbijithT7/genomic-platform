@@ -4,7 +4,6 @@ import {
   Download,
   FileCheck,
   AlertCircle,
-  X,
   Loader2,
 } from "lucide-react";
 import { uploadVcfFile } from "../lib/api";
@@ -101,139 +100,172 @@ export default function FileUpload({ onUploadSuccess, theme = "dark" }) {
     }
   };
 
-  // Upload completed state
-  if (uploadResult && !error) {
-    return (
-      <div
-        className={`surface-card p-6 animate-fade-in border ${theme === "dark" ? "border-zinc-800 bg-zinc-900" : "border-stone-300 bg-stone-50"}`}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0 text-emerald-400">
-              <FileCheck size={20} />
+  const isLight = theme === "light";
+
+  return (
+    <div className="w-full">
+      {/* Uploaded active file banner */}
+      {uploadResult && !error ? (
+        <div
+          className={`rounded-lg p-5 border transition-colors flex items-center justify-between gap-4 ${
+            isLight
+              ? "bg-white border-slate-300 text-slate-900 shadow-sm"
+              : "bg-[#0e1424] border-slate-800 text-slate-100"
+          }`}
+        >
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div
+              className={`w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0 ${
+                isLight
+                  ? "bg-emerald-100 border border-emerald-300 text-emerald-700"
+                  : "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+              }`}
+            >
+              <FileCheck size={18} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p
-                  className={`font-semibold text-sm m-0 ${theme === "dark" ? "text-white" : "text-stone-900"}`}
-                >
-                  VCF Successfully Loaded
-                </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-sm font-semibold truncate">
+                  {file?.name || uploadResult.filename}
+                </span>
                 <span
-                  className={`text-xs px-2 py-0.5 rounded font-mono ${theme === "dark" ? "bg-zinc-800 text-zinc-400" : "bg-stone-200 text-stone-600"}`}
+                  className={`text-xs px-2 py-0.5 rounded font-mono font-medium ${
+                    isLight
+                      ? "bg-cyan-100 text-cyan-800 border border-cyan-300"
+                      : "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                  }`}
                 >
-                  {uploadResult.totalVariants ??
-                    uploadResult.patient?.variants?.length ??
-                    0}{" "}
-                  variants
+                  {uploadResult.totalVariants ?? uploadResult.patient?.variants?.length ?? 0} variants
                 </span>
               </div>
               <p
-                className={`text-xs font-mono mt-1 m-0 ${theme === "dark" ? "text-zinc-400" : "text-stone-600"}`}
+                className={`text-xs mt-0.5 ${
+                  isLight ? "text-slate-600" : "text-slate-400"
+                }`}
               >
-                {file?.name || uploadResult.filename}
+                VCF ingested into pipeline. Ready for interpretation.
               </p>
-              {uploadResult.patientId && (
-                <p className="text-orange-400/90 text-xs mt-2 m-0 flex items-center gap-1">
-                  <span>Patient ID:</span>
-                  <span className="font-mono text-zinc-300">
-                    {uploadResult.patientId.slice(0, 8)}...
-                  </span>
-                </p>
-              )}
             </div>
           </div>
+
           <button
             onClick={reset}
-            className={`p-1.5 rounded-md transition-colors ${theme === "dark" ? "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800" : "text-stone-500 hover:text-stone-800 hover:bg-stone-200"}`}
-            title="Upload another file"
+            className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors flex-shrink-0 ${
+              isLight
+                ? "border-slate-300 text-slate-700 hover:text-slate-900 hover:bg-slate-100 bg-white"
+                : "border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 bg-[#0a0e17]"
+            }`}
           >
-            <X size={18} />
+            Upload Another VCF
           </button>
         </div>
-      </div>
-    );
-  }
+      ) : (
+        /* The Hero Ingestion Box */
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onClick={() => inputRef.current?.click()}
+          className={`rounded-xl p-8 sm:p-10 text-center cursor-pointer transition-all border relative group ${
+            isDragging
+              ? "border-cyan-500 ring-2 ring-cyan-500/20 bg-cyan-50"
+              : error
+                ? "border-rose-500/40 bg-rose-50"
+                : isLight
+                  ? "bg-white border-slate-300 hover:border-slate-400 hover:bg-slate-50/80 shadow-sm"
+                  : "bg-[#0e1424] border-slate-800 hover:border-slate-700 hover:bg-[#11192d]"
+          }`}
+        >
+          {uploading && (
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3 z-20 rounded-xl">
+              <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+              <p className="text-slate-200 text-xs font-medium">
+                Parsing and streaming VCF variants...
+              </p>
+            </div>
+          )}
 
-  return (
-    <div className="animate-fade-in">
-      <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onClick={() => inputRef.current?.click()}
-        className={`surface-card p-8 text-center cursor-pointer transition-all duration-200 relative overflow-hidden group ${
-          isDragging
-            ? "border-orange-500 bg-orange-500/5 ring-2 ring-orange-500/20"
-            : error
-              ? "border-red-500/40 bg-red-500/5"
-              : theme === "dark"
-                ? "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700 hover:bg-zinc-900"
-                : "border-stone-300 bg-stone-50 hover:border-stone-400 hover:bg-stone-100"
-        }`}
-      >
-        {/* Uploading overlay */}
-        {uploading && (
-          <div className="absolute inset-0 bg-zinc-950/85 flex flex-col items-center justify-center gap-3 z-10">
-            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-            <p className="text-zinc-300 text-sm font-medium">
-              Parsing and storing VCF variants...
+          <div className="max-w-md mx-auto space-y-4">
+            <div
+              className={`w-11 h-11 rounded-lg flex items-center justify-center mx-auto transition-transform group-hover:scale-105 ${
+                isLight
+                  ? "bg-cyan-100 border border-cyan-200 text-cyan-700"
+                  : "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400"
+              }`}
+            >
+              <Upload size={20} />
+            </div>
+
+            <div className="space-y-1">
+              <h1
+                className={`text-xl sm:text-2xl font-bold tracking-tight m-0 ${
+                  isLight ? "text-slate-900" : "text-white"
+                }`}
+              >
+                Analyze a VCF
+              </h1>
+              <p
+                className={`text-xs sm:text-sm m-0 ${
+                  isLight ? "text-slate-600" : "text-slate-400"
+                }`}
+              >
+                Upload <code className="font-mono font-semibold text-cyan-700 dark:text-cyan-400">.vcf</code> or <code className="font-mono font-semibold text-cyan-700 dark:text-cyan-400">.vcf.gz</code>
+              </p>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                className={`inline-flex items-center justify-center px-4 py-2 text-xs font-semibold rounded-md transition-colors shadow-xs ${
+                  isLight
+                    ? "bg-cyan-600 hover:bg-cyan-700 text-white"
+                    : "bg-cyan-500 hover:bg-cyan-400 text-slate-950"
+                }`}
+              >
+                Choose VCF
+              </button>
+            </div>
+
+            <p
+              className={`text-xs font-medium tracking-wide pt-1 m-0 ${
+                isLight ? "text-slate-500" : "text-slate-400"
+              }`}
+            >
+              ClinVar · CADD · AI/ML interpretation
             </p>
           </div>
-        )}
 
-        <div className="w-12 h-12 rounded-xl bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center mx-auto mb-4 text-zinc-400 group-hover:text-orange-400 group-hover:border-orange-500/40 group-hover:bg-orange-500/10 transition-all">
-          <Upload size={22} />
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".vcf,.vcf.gz"
+            onChange={handleInputChange}
+            className="hidden"
+          />
         </div>
-
-        <h3
-          className={`text-base font-semibold mb-1 ${theme === "dark" ? "text-white" : "text-stone-900"}`}
-        >
-          {isDragging
-            ? "Drop your VCF file here"
-            : "Drop your VCF file here or browse"}
-        </h3>
-        <p
-          className={`text-xs max-w-sm mx-auto mb-4 ${theme === "dark" ? "text-zinc-400" : "text-stone-600"}`}
-        >
-          Securely ingest a standard genomic <code className="text-teal-500 font-mono">.vcf</code> or compressed <code className="text-teal-500 font-mono">.vcf.gz</code> file.
-        </p>
-
-        <div className="flex items-center justify-center">
-          <button
-            type="button"
-            className={`px-4 py-2 text-xs font-medium rounded-lg border transition-colors ${theme === "dark" ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700" : "bg-stone-200 hover:bg-stone-300 text-stone-800 border-stone-300"}`}
-          >
-            Select .VCF File
-          </button>
-        </div>
-
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".vcf,.vcf.gz"
-          onChange={handleInputChange}
-          className="hidden"
-        />
-      </div>
+      )}
 
       {error && (
-        <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2.5 text-red-400 text-xs animate-fade-in">
-          <AlertCircle size={16} className="flex-shrink-0" />
+        <div className="mt-3 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-500/10 dark:border-rose-500/30 dark:text-rose-400 text-xs flex items-center gap-2">
+          <AlertCircle size={15} className="flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Sample VCF download link */}
-      <div className={`mt-4 flex items-center justify-between text-xs ${theme === "dark" ? "text-zinc-500" : "text-stone-500"}`}>
-        <span>Need a demo file to try?</span>
+      {/* Clean Demo Link */}
+      <div
+        className={`mt-2.5 flex items-center justify-between text-xs px-1 ${
+          isLight ? "text-slate-600" : "text-slate-400"
+        }`}
+      >
+        <span>Need a test file?</span>
         <button
           type="button"
           onClick={downloadSampleVcf}
-          className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-lg border transition-colors ${theme === "dark" ? "border-zinc-800 hover:border-zinc-700 text-zinc-300" : "border-stone-200 hover:border-stone-300 text-stone-600"}`}
+          className="inline-flex items-center gap-1.5 text-cyan-700 dark:text-cyan-400 hover:underline font-medium"
         >
           <Download size={12} />
-          Download sample VCF
+          <span>Download sample VCF</span>
         </button>
       </div>
     </div>
@@ -253,22 +285,24 @@ function downloadSampleVcf() {
 }
 
 const SAMPLE_VCF_CONTENT = `##fileformat=VCFv4.2
-##source=GenoLabTest
-##reference=GRCh38
-##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
-##INFO=<ID=AF,Number=1,Type=Float,Description="Allele Frequency">
-##contig=<ID=chr1,length=248956422>
-##contig=<ID=chr7,length=159345973>
-##contig=<ID=chr17,length=83257441>
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
-chr1	10019	rs1234	A	G	99	PASS	GENE=BRCA1;AF=0.0001
-chr7	140453136	rs113488022	A	T	99	PASS	GENE=BRAF;AF=0.00001
-chr7	117559590	rs121913529	T	C	99	PASS	GENE=EGFR;AF=0.0001
-chr17	43094464	rs80357906	A	G	99	PASS	GENE=BRCA1;AF=0.0001
-chr17	7674220	rs80359550	T	C	99	PASS	GENE=TP53;AF=0.00001
-chr1	150551945	rs121909218	T	G	99	PASS	GENE=LMNA;AF=0.0001
-chr7	92170277	rs113993960	G	A	99	PASS	GENE=CFTR;AF=0.002
-chr1	216369765	rs121913530	C	T	99	PASS	GENE=USH2A;AF=0.0001
-chr17	43092075	rs80357713	T	A	99	PASS	GENE=BRCA1;AF=0.00001
-chr5	112839514	rs121434416	C	T	99	PASS	GENE=APC;AF=0.0001
+##fileDate=20260917
+##source=GenomicPlatformClinicalVCF
+##reference=hg19
+##INFO=<ID=GENE,Number=1,Type=String,Description="Associated Gene Symbol">
+##INFO=<ID=CLNSIG,Number=.,Type=String,Description="ClinVar Clinical Significance">
+##INFO=<ID=CLNDN,Number=.,Type=String,Description="ClinVar Disease/Phenotype Name">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Population Allele Frequency (gnomAD/1000G)">
+##INFO=<ID=CADD,Number=A,Type=Float,Description="CADD Phred-scaled Deleteriousness Score">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	PATIENT_01
+chr7	140453136	rs113488022	A	T	99	PASS	GENE=BRAF;CLNSIG=Pathogenic;CLNDN=Colorectal_carcinoma;AF=0.000004;CADD=32.0	GT	0/1
+chr17	41276045	rs80357906	C	T	99	PASS	GENE=BRCA1;CLNSIG=Pathogenic;CLNDN=Hereditary_breast_and_ovarian_cancer_syndrome;AF=0.00001;CADD=28.5	GT	0/1
+chr17	7577120	rs28934578	C	T	99	PASS	GENE=TP53;CLNSIG=Pathogenic;CLNDN=Li-Fraumeni_syndrome;AF=0.00002;CADD=33.0	GT	0/1
+chr12	25398284	rs121913529	C	T	99	PASS	GENE=KRAS;CLNSIG=Pathogenic;CLNDN=Pancreatic_and_colorectal_carcinoma;AF=0.00001;CADD=29.0	GT	0/1
+chr7	117199644	rs113993960	ATCT	A	99	PASS	GENE=CFTR;CLNSIG=Pathogenic;CLNDN=Cystic_fibrosis;AF=0.015;CADD=26.0	GT	0/1
+chr1	11856378	rs1801133	G	A	99	PASS	GENE=MTHFR;CLNSIG=Benign;CLNDN=Hyperhomocysteinemia;AF=0.32;CADD=12.0	GT	0/1
+chr6	26093141	rs1800562	G	A	99	PASS	GENE=HFE;CLNSIG=Benign;CLNDN=Hereditary_hemochromatosis;AF=0.06;CADD=14.5	GT	0/1
+chr2	136608646	rs4988235	G	A	99	PASS	GENE=MCM6;CLNSIG=Benign;CLNDN=Lactase_persistence;AF=0.65;CADD=4.2	GT	0/1
+chr22	19951271	rs4680	G	A	99	PASS	GENE=COMT;CLNSIG=Benign;CLNDN=Pain_sensitivity;AF=0.48;CADD=11.8	GT	0/1
+chr11	66560624	rs1815739	C	T	99	PASS	GENE=ACTN3;CLNSIG=Benign;CLNDN=Athletic_performance;AF=0.52;CADD=9.1	GT	0/1
 `;

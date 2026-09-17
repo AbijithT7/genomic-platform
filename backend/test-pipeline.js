@@ -14,7 +14,7 @@ async function testPipeline() {
   const unknownFeat = await fetchFeatures('1', 999999999, 'A', 'T');
   console.log('Unknown Variant Features (should be zeroes/null):', unknownFeat);
 
-  if (unknownFeat.allele_frequency !== 0 || unknownFeat.cadd_score !== 0) {
+  if (unknownFeat.allele_frequency !== null || unknownFeat.cadd_score !== null) {
     throw new Error('Fallback failed for unknown variant');
   }
   console.log('✓ Annotation service unit test passed!\n');

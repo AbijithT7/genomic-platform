@@ -1,11 +1,17 @@
 ##fileformat=VCFv4.2
-##source=SIH_Genomic_Platform_hg19
+##fileDate=20260917
+##source=GenomicPlatformClinicalVCF_v2.0
 ##reference=hg19
+##INFO=<ID=GENE,Number=1,Type=String,Description="Associated Gene Symbol">
+##INFO=<ID=CLNSIG,Number=.,Type=String,Description="ClinVar Clinical Significance">
+##INFO=<ID=CLNDN,Number=.,Type=String,Description="ClinVar Disease/Phenotype Name">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Population Allele Frequency (gnomAD/1000G)">
+##INFO=<ID=CADD,Number=A,Type=Float,Description="CADD Phred-scaled Deleteriousness Score">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	PATIENT_02
-10	89692905	rs121909224	G	A	99	PASS	.	GT	0/1
-22	19963748	rs4680	G	A	99	PASS	.	GT	0/1
-11	66369408	rs1815739	C	T	99	PASS	.	GT	0/1
-19	45411941	rs429358	T	C	99	PASS	.	GT	0/1
-16	89980635	rs1805007	C	T	99	PASS	.	GT	0/1
-2	136608646	rs4988235	G	A	99	PASS	.	GT	0/1
-9	136155097	rs3743075	G	A	99	PASS	.	GT	0/1
+chr7	140453136	rs113488022	A	T	99	PASS	GENE=BRAF;CLNSIG=Pathogenic;CLNDN=Colorectal_carcinoma;AF=0.000004;CADD=32.0	GT	0/1
+chr7	117199644	rs113993960	ATCT	A	99	PASS	GENE=CFTR;CLNSIG=Pathogenic;CLNDN=Cystic_fibrosis;AF=0.015;CADD=26.0	GT	0/1
+chr22	19951271	rs4680	G	A	99	PASS	GENE=COMT;CLNSIG=Benign;CLNDN=Pain_sensitivity;AF=0.48;CADD=11.8	GT	0/1
+chr11	66560624	rs1815739	C	T	99	PASS	GENE=ACTN3;CLNSIG=Benign;CLNDN=Athletic_performance;AF=0.52;CADD=9.1	GT	0/1
+chr2	136608646	rs4988235	G	A	99	PASS	GENE=MCM6;CLNSIG=Benign;CLNDN=Lactase_persistence;AF=0.65;CADD=4.2	GT	0/1
+chr1	11856378	rs1801133	G	A	99	PASS	GENE=MTHFR;CLNSIG=Benign;CLNDN=Hyperhomocysteinemia;AF=0.32;CADD=12.0	GT	0/1

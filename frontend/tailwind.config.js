@@ -4,6 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          cyan: '#00E5FF',
+          dark: '#06080F',
+          surface: '#090D18',
+          card: '#0D1322',
+          border: 'rgba(255, 255, 255, 0.08)',
+          borderMuted: 'rgba(255, 255, 255, 0.05)',
+        },
         genome: {
           50: '#e8f0fe',
           100: '#c5dcfb',
@@ -19,8 +27,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['"Inter"', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       fontSize: {
         '2xs': ['0.65rem', { lineHeight: '0.9rem' }],

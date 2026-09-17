@@ -1,13 +1,10 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import {
-  Dna,
   Search,
   Filter,
-  AlertTriangle,
-  CheckCircle2,
-  HelpCircle,
   ChevronRight,
   X,
+  FileSpreadsheet,
 } from "lucide-react";
 
 function StatusBadge({ status }) {
@@ -16,70 +13,80 @@ function StatusBadge({ status }) {
   const configs = {
     pathogenic: {
       className: "badge-pathogenic",
-      icon: AlertTriangle,
+      dotClass: "bg-rose-500",
       label: "Pathogenic",
     },
     benign: {
       className: "badge-benign",
-      icon: CheckCircle2,
+      dotClass: "bg-emerald-500",
       label: "Benign",
     },
     vus: {
       className: "badge-vus",
-      icon: HelpCircle,
+      dotClass: "bg-purple-500",
       label: "VUS",
     },
     pending: {
       className: "badge-pending",
-      icon: null,
+      dotClass: "bg-slate-400",
       label: "Pending",
     },
   };
 
   const config = configs[s] || configs.pending;
-  const Icon = config.icon;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${config.className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-sans font-medium ${config.className}`}
     >
-      {Icon && <Icon size={12} className="flex-shrink-0" />}
+      <span className={`w-1.5 h-1.5 rounded-full ${config.dotClass}`} />
       <span>{config.label}</span>
     </span>
   );
 }
 
-function RiskBar({ score }) {
-  if (score == null) {
-    return <span className="text-zinc-500 text-xs font-mono">—</span>;
+function RiskBar({ score, isLight }) {
+  if (score == null || typeof score !== "number" || isNaN(score)) {
+    return <span className={isLight ? "text-slate-400 text-xs font-mono" : "text-slate-500 text-xs font-mono"}>—</span>;
   }
 
   const pct = Math.min(Math.max(score * 100, 0), 100);
-  const colorClass =
-    pct >= 70
-      ? "bg-orange-500 text-orange-400"
-      : pct >= 40
-        ? "bg-amber-500 text-amber-400"
-        : "bg-emerald-500 text-emerald-400";
 
-  const textColorClass =
-    pct >= 70
-      ? "text-orange-400 font-bold"
-      : pct >= 40
-        ? "text-amber-400"
-        : "text-emerald-400";
+  // Exact backend thresholds: >= 0.80 Pathogenic, < 0.20 Benign, otherwise VUS
+  const barColor =
+    score >= 0.8
+      ? "bg-rose-500"
+      : score < 0.2
+        ? "bg-emerald-500"
+        : "bg-purple-500";
+
+  const textColor = isLight
+    ? score >= 0.8
+      ? "text-rose-700 font-bold"
+      : score < 0.2
+        ? "text-emerald-700 font-bold"
+        : "text-purple-700 font-bold"
+    : score >= 0.8
+      ? "text-rose-400 font-bold"
+      : score < 0.2
+        ? "text-emerald-400 font-bold"
+        : "text-purple-300 font-bold";
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-16 h-2 rounded-full bg-zinc-800 overflow-hidden flex-shrink-0 border border-zinc-700/50">
+    <div className="flex items-center gap-2">
+      <span className={`text-xs font-mono w-10 ${textColor}`}>
+        {score.toFixed(3)}
+      </span>
+      <div
+        className={`w-16 h-1.5 rounded-full overflow-hidden flex-shrink-0 ${
+          isLight ? "bg-slate-200" : "bg-slate-800"
+        }`}
+      >
         <div
-          className={`h-full rounded-full transition-all duration-500 ${colorClass.split(" ")[0]}`}
+          className={`h-full transition-all duration-300 ${barColor}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className={`text-xs font-mono ${textColorClass}`}>
-        {score.toFixed(3)}
-      </span>
     </div>
   );
 }
@@ -96,48 +103,68 @@ export default function VariantTable({
   selectedVariantId,
   onSelectVariant,
   theme = "dark",
+  searchTerm = "",
+  onSearchChange,
+  statusFilter = "ALL",
+  onStatusFilterChange,
 }) {
-  const [searchInput, setSearchInput] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const isLight = theme === "light";
 
-  // Filter and sort: Pathogenic variants at the top, then by ML score descending
+  // Filter and sort: Pathogenic variants prioritized at top, then by ML score descending
   const filteredAndSorted = useMemo(() => {
     if (!variants?.length) return [];
+
+    const query = searchTerm.toLowerCase().trim();
+    const cleanQuery = query.replace(/^chr/i, "");
 
     return variants
       .filter((v) => {
         // Status filter
         if (statusFilter !== "ALL") {
-          if (
-            (v.status || "pending").toLowerCase() !== statusFilter.toLowerCase()
-          ) {
+          if ((v.status || "pending").toLowerCase() !== statusFilter.toLowerCase()) {
             return false;
           }
         }
 
-        // Search term filter (matches coordinates, alleles, status and evidence)
-        if (searchTerm.trim()) {
-          const query = searchTerm.toLowerCase().trim();
-          const matchChrom = String(v.chrom).toLowerCase().includes(query);
-          const matchPos = String(v.pos).includes(query);
-          const matchRef = String(v.ref).toLowerCase().includes(query);
-          const matchAlt = String(v.alt).toLowerCase().includes(query);
-          const matchStatus = String(v.status || "").toLowerCase().includes(query);
-          const matchGene = String(v.gene || v.evidence?.gene || "").toLowerCase().includes(query);
-          const matchDisease = String(getDisease(v.evidence, v) || "").toLowerCase().includes(query);
-          return matchChrom || matchPos || matchRef || matchAlt || matchStatus || matchGene || matchDisease;
+        // Search query across all core fields
+        if (query) {
+          const chrom = String(v.chrom || "").toLowerCase().replace(/^chr/i, "");
+          const pos = String(v.pos || "");
+          const ref = String(v.ref || "").toLowerCase();
+          const alt = String(v.alt || "").toLowerCase();
+          const status = String(v.status || "").toLowerCase();
+          const gene = String(v.gene || v.evidence?.gene || "").toLowerCase();
+          const disease = String(getDisease(v.evidence, v) || "").toLowerCase();
+          const rsid = String(v.rsid || "").toLowerCase();
+
+          const matchChrom = chrom.includes(cleanQuery) || `chr${chrom}`.includes(query);
+          const matchPos = pos.includes(query);
+          const matchRef = ref.includes(query);
+          const matchAlt = alt.includes(query);
+          const matchStatus = status.includes(query);
+          const matchGene = gene.includes(query);
+          const matchDisease = disease.includes(query);
+          const matchRsid = rsid.includes(query);
+
+          return (
+            matchChrom ||
+            matchPos ||
+            matchRef ||
+            matchAlt ||
+            matchStatus ||
+            matchGene ||
+            matchDisease ||
+            matchRsid
+          );
         }
 
         return true;
       })
       .sort((a, b) => {
-        // Rule: Pathogenic variants appear at the very top
         const aPath = (a.status || "").toLowerCase() === "pathogenic" ? 1 : 0;
         const bPath = (b.status || "").toLowerCase() === "pathogenic" ? 1 : 0;
         if (bPath !== aPath) return bPath - aPath;
 
-        // Then sort by ML score descending
         const aScore = a.evidence?.ml_score ?? -1;
         const bScore = b.evidence?.ml_score ?? -1;
         return bScore - aScore;
@@ -147,22 +174,32 @@ export default function VariantTable({
   if (!variants?.length) {
     return (
       <div
-        className={`surface-card p-12 text-center border ${theme === "dark" ? "border-zinc-800 bg-zinc-900" : "border-stone-300 bg-stone-50"}`}
+        className={`rounded-lg p-10 text-center border transition-colors ${
+          isLight
+            ? "border-slate-300 text-slate-600 bg-white"
+            : "border-slate-800 text-slate-400 bg-[#0c111d]"
+        }`}
       >
         <div
-          className={`w-12 h-12 rounded-xl border flex items-center justify-center mx-auto mb-3 ${theme === "dark" ? "bg-zinc-800/80 border-zinc-700/60 text-zinc-500" : "bg-stone-200 border-stone-300 text-stone-600"}`}
+          className={`w-10 h-10 rounded-md flex items-center justify-center mx-auto mb-2.5 ${
+            isLight ? "bg-slate-100 text-slate-500" : "bg-slate-800 text-slate-400"
+          }`}
         >
-          <Dna size={22} />
+          <FileSpreadsheet size={20} />
         </div>
         <p
-          className={`text-sm font-medium ${theme === "dark" ? "text-zinc-300" : "text-stone-700"}`}
+          className={`text-sm font-semibold m-0 ${
+            isLight ? "text-slate-900" : "text-slate-100"
+          }`}
         >
-          No variants loaded yet.
+          No variants loaded
         </p>
         <p
-          className={`text-xs mt-1 ${theme === "dark" ? "text-zinc-500" : "text-stone-600"}`}
+          className={`text-xs mt-1 max-w-sm mx-auto m-0 ${
+            isLight ? "text-slate-600" : "text-slate-400"
+          }`}
         >
-          Upload a VCF file above to populate and interpret variants.
+          Upload a VCF file above to populate the variant analysis table.
         </p>
       </div>
     );
@@ -170,52 +207,76 @@ export default function VariantTable({
 
   return (
     <div
-      className={`surface-card overflow-hidden animate-fade-in shadow-xl border ${theme === "dark" ? "border-zinc-800 bg-zinc-900" : "border-stone-300 bg-stone-50"}`}
+      className={`rounded-lg overflow-hidden border transition-colors ${
+        isLight
+          ? "border-slate-300 bg-white shadow-xs"
+          : "border-slate-800 bg-[#0c111d]"
+      }`}
     >
-      {/* Table Toolbar */}
+      {/* Search & Filter Toolbar */}
       <div
-        className={`p-4 border-b flex flex-wrap items-center justify-between gap-3 ${theme === "dark" ? "border-zinc-800 bg-zinc-900/90" : "border-stone-300 bg-stone-100/90"}`}
+        className={`p-3 border-b flex flex-wrap items-center justify-between gap-3 ${
+          isLight ? "border-slate-200 bg-slate-50" : "border-slate-800 bg-[#0c111d]"
+        }`}
       >
-        <form
-          className="relative flex flex-1 min-w-[245px] max-w-md gap-2"
-          onSubmit={(event) => { event.preventDefault(); setSearchTerm(searchInput); }}
-        >
+        {/* Search Bar */}
+        <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search
             size={14}
-            className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme === "dark" ? "text-zinc-500" : "text-stone-500"}`}
+            className={`absolute left-3 top-1/2 -translate-y-1/2 ${
+              isLight ? "text-slate-500" : "text-slate-400"
+            }`}
           />
           <input
             type="text"
-            aria-label="Search variants"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Variant, position, allele, or status"
-            className={`w-full pl-9 pr-8 py-2 border rounded-lg text-xs focus:outline-none focus:border-teal-500/60 transition-colors ${theme === "dark" ? "bg-zinc-950 border-zinc-800 text-zinc-200 placeholder-zinc-500" : "bg-white/80 border-[#bfd4ce] text-[#193233] placeholder-[#75908b]"}`}
+            value={searchTerm}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            placeholder="Filter chromosome, position, gene, rsID, condition..."
+            className={`w-full pl-9 pr-8 py-1.5 border rounded-md text-xs focus:outline-none focus:border-cyan-500 font-sans transition-colors ${
+              isLight
+                ? "bg-white border-slate-300 text-slate-900 placeholder-slate-400"
+                : "bg-[#080d18] border-slate-700 text-slate-100 placeholder-slate-500"
+            }`}
           />
-          {searchInput && <button type="button" onClick={() => { setSearchInput(""); setSearchTerm(""); }} aria-label="Clear variant search" className={`absolute right-[76px] top-1/2 -translate-y-1/2 ${theme === "dark" ? "text-zinc-500 hover:text-white" : "text-slate-500 hover:text-teal-800"}`}><X size={14} /></button>}
-          <button type="submit" className="rounded-lg bg-teal-500 px-3 text-xs font-bold text-[#062421] transition-colors hover:bg-teal-300">Search</button>
-        </form>
+          {searchTerm && (
+            <button
+              onClick={() => onSearchChange?.("")}
+              className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${
+                isLight
+                  ? "text-slate-500 hover:text-slate-800"
+                  : "text-slate-400 hover:text-slate-100"
+              }`}
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
 
-        <div className="flex items-center gap-2">
+        {/* Status Filter Buttons */}
+        <div className="flex items-center gap-1.5">
           <span
-            className={`text-xs flex items-center gap-1 ${theme === "dark" ? "text-zinc-500" : "text-stone-600"}`}
+            className={`text-xs flex items-center gap-1 mr-1 ${
+              isLight ? "text-slate-600" : "text-slate-400"
+            }`}
           >
-            <Filter size={12} /> Filter:
+            <Filter size={12} /> Status:
           </span>
           {["ALL", "PATHOGENIC", "BENIGN", "VUS"].map((cat) => (
             <button
               key={cat}
-              onClick={() => setStatusFilter(cat)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+              onClick={() => onStatusFilterChange?.(cat)}
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                 statusFilter === cat
                   ? cat === "PATHOGENIC"
-                    ? "bg-orange-500/20 text-orange-400 border border-orange-500/40"
-                    : theme === "dark"
-                      ? "bg-zinc-800 text-white border border-zinc-700"
-                      : "bg-stone-200 text-stone-900 border border-stone-300"
-                  : theme === "dark"
-                    ? "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
-                    : "text-stone-600 hover:text-stone-900 hover:bg-stone-200/70"
+                    ? "bg-rose-600 text-white font-semibold"
+                    : cat === "BENIGN"
+                      ? "bg-emerald-600 text-white font-semibold"
+                      : cat === "VUS"
+                        ? "bg-purple-600 text-white font-semibold"
+                        : "bg-cyan-600 text-white font-semibold"
+                  : isLight
+                    ? "text-slate-700 hover:text-slate-900 hover:bg-slate-200 border border-slate-200"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-transparent"
               }`}
             >
               {cat}
@@ -224,105 +285,192 @@ export default function VariantTable({
         </div>
       </div>
 
-      {/* Table Container */}
+      {/* Main Table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
+        <table className="w-full text-left font-mono text-xs border-collapse">
           <thead>
             <tr
-              className={`border-b uppercase tracking-wider font-semibold ${theme === "dark" ? "border-zinc-800 bg-zinc-950/60 text-zinc-400" : "border-stone-300 bg-stone-100 text-stone-600"}`}
+              className={`border-b text-xs font-semibold uppercase tracking-wider ${
+                isLight
+                  ? "border-slate-300 bg-slate-100 text-slate-700"
+                  : "border-slate-800 bg-[#080d18] text-slate-400"
+              }`}
             >
-              <th className="py-3 px-4">Chromosome</th>
-              <th className="py-3 px-4">Position</th>
-              <th className="py-3 px-4">Ref</th>
-              <th className="py-3 px-4">Alt</th>
-              <th className="py-3 px-4">ML Risk Score</th>
-              <th className="py-3 px-4">Classification</th>
-              <th className="py-3 px-4">Tested Condition</th>
-              <th className="py-3 px-4 text-right">Details</th>
+              <th className="py-2.5 px-3">#</th>
+              <th className="py-2.5 px-3">CHROM</th>
+              <th className="py-2.5 px-3">POS</th>
+              <th className="py-2.5 px-3">REF</th>
+              <th className="py-2.5 px-3">ALT</th>
+              <th className="py-2.5 px-3">GENE</th>
+              <th className="py-2.5 px-3">ML RISK SCORE</th>
+              <th className="py-2.5 px-3">STATUS</th>
+              <th className="py-2.5 px-3">CLINVAR</th>
+              <th className="py-2.5 px-3">CADD</th>
+              <th className="py-2.5 px-3">CONDITION</th>
+              <th className="py-2.5 px-3 text-right">INSPECT</th>
             </tr>
           </thead>
           <tbody
-            className={`${theme === "dark" ? "divide-y divide-zinc-800/60" : "divide-y divide-stone-200"}`}
+            className={`divide-y ${
+              isLight ? "divide-slate-200" : "divide-slate-800/80"
+            }`}
           >
-            {filteredAndSorted.map((variant) => {
+            {filteredAndSorted.map((variant, idx) => {
               const isSelected = variant.id === selectedVariantId;
-              const isPathogenic =
-                (variant.status || "").toLowerCase() === "pathogenic";
+              const isPathogenic = (variant.status || "").toLowerCase() === "pathogenic";
+              const caddScore = variant.evidence?.conservation_score;
+              const clinvarStatus = variant.evidence?.clinvar_status;
+              const disease = getDisease(variant.evidence, variant);
+              const gene = variant.gene || variant.evidence?.gene || "—";
 
               return (
                 <tr
                   key={variant.id}
                   onClick={() => onSelectVariant?.(variant)}
-                  className={`cursor-pointer transition-all duration-150 group ${
+                  className={`cursor-pointer transition-colors group ${
                     isSelected
-                      ? "bg-orange-500/10 border-l-4 border-l-orange-500"
+                      ? isLight
+                        ? "bg-cyan-50 border-l-4 border-cyan-600"
+                        : "bg-cyan-950/40 border-l-4 border-cyan-400"
                       : isPathogenic
-                        ? "bg-orange-500/[0.03] hover:bg-orange-500/[0.07] border-l-2 border-l-orange-500/40"
-                        : theme === "dark"
-                          ? "hover:bg-zinc-800/40 border-l-2 border-l-transparent"
-                          : "hover:bg-stone-100 border-l-2 border-l-transparent"
+                        ? isLight
+                          ? "hover:bg-rose-50"
+                          : "hover:bg-rose-950/20"
+                        : isLight
+                          ? "hover:bg-slate-100"
+                          : "hover:bg-slate-800/40"
                   }`}
                 >
-                  {/* Chromosome */}
+                  {/* # */}
                   <td
-                    className={`py-3 px-4 font-mono font-medium ${theme === "dark" ? "text-zinc-200" : "text-stone-800"}`}
+                    className={`py-2.5 px-3 ${
+                      isLight ? "text-slate-500" : "text-slate-500"
+                    }`}
                   >
-                    <span
-                      className={`px-2 py-0.5 rounded border ${theme === "dark" ? "bg-zinc-800/80 border-zinc-700/50 text-zinc-300" : "bg-stone-200 border-stone-300 text-stone-700"}`}
-                    >
-                      chr{variant.chrom}
-                    </span>
+                    {idx + 1}
                   </td>
 
-                  {/* Position */}
+                  {/* Chrom */}
                   <td
-                    className={`py-3 px-4 font-mono font-medium ${theme === "dark" ? "text-zinc-300" : "text-stone-700"}`}
+                    className={`py-2.5 px-3 font-semibold ${
+                      isLight ? "text-slate-800" : "text-slate-300"
+                    }`}
+                  >
+                    chr{variant.chrom}
+                  </td>
+
+                  {/* Pos */}
+                  <td
+                    className={`py-2.5 px-3 font-bold ${
+                      isLight ? "text-slate-900" : "text-white"
+                    }`}
                   >
                     {variant.pos?.toLocaleString()}
                   </td>
 
-                  {/* Reference Allele */}
-                  <td className="py-3 px-4 font-mono">
-                    <span
-                      className={`px-2 py-0.5 rounded border ${theme === "dark" ? "bg-zinc-800 text-zinc-400 border-zinc-700/40" : "bg-stone-200 text-stone-700 border-stone-300"}`}
-                    >
-                      {variant.ref}
-                    </span>
+                  {/* Ref */}
+                  <td
+                    className={`py-2.5 px-3 font-semibold ${
+                      isLight ? "text-slate-700" : "text-slate-400"
+                    }`}
+                  >
+                    {variant.ref}
                   </td>
 
-                  {/* Alternate Allele */}
-                  <td className="py-3 px-4 font-mono">
-                    <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/30 font-semibold">
-                      {variant.alt}
-                    </span>
+                  {/* Alt */}
+                  <td
+                    className={`py-2.5 px-3 font-extrabold ${
+                      isLight ? "text-cyan-700" : "text-cyan-400"
+                    }`}
+                  >
+                    {variant.alt}
+                  </td>
+
+                  {/* Gene */}
+                  <td
+                    className={`py-2.5 px-3 font-bold ${
+                      isLight ? "text-slate-900" : "text-slate-200"
+                    }`}
+                  >
+                    {gene}
                   </td>
 
                   {/* ML Risk Score */}
-                  <td className="py-3 px-4">
-                    <RiskBar score={variant.evidence?.ml_score} />
+                  <td className="py-2.5 px-3">
+                    <RiskBar score={variant.evidence?.ml_score} isLight={isLight} />
                   </td>
 
-                  {/* Status Badge */}
-                  <td className="py-3 px-4">
+                  {/* Status */}
+                  <td className="py-2.5 px-3">
                     <StatusBadge status={variant.status} />
                   </td>
 
-                  <td className={`py-3 px-4 max-w-[240px] ${theme === "dark" ? "text-zinc-300" : "text-slate-700"}`}>
-                    {getDisease(variant.evidence, variant) ? (
-                      <span className="line-clamp-2 leading-relaxed" title={getDisease(variant.evidence, variant)}>
-                        {getDisease(variant.evidence, variant)}
+                  {/* ClinVar */}
+                  <td
+                    className={`py-2.5 px-3 font-sans text-xs ${
+                      isLight ? "text-slate-800" : "text-slate-300"
+                    }`}
+                  >
+                    {clinvarStatus ? (
+                      <span
+                        className="truncate max-w-[130px] inline-block font-medium"
+                        title={clinvarStatus}
+                      >
+                        {clinvarStatus}
                       </span>
                     ) : (
-                      <span className={`text-[11px] ${theme === "dark" ? "text-zinc-600" : "text-slate-400"}`}>
-                        {variant.status === "pending" ? "Pending analysis" : "Not reported"}
-                      </span>
+                      <span className={isLight ? "text-slate-400" : "text-slate-600"}>—</span>
                     )}
                   </td>
 
-                  {/* Action arrow */}
-                  <td className="py-3 px-4 text-right">
+                  {/* CADD */}
+                  <td className="py-2.5 px-3">
+                    {caddScore != null ? (
+                      <span
+                        className={`font-semibold ${
+                          caddScore >= 20
+                            ? isLight
+                              ? "text-rose-700 font-bold"
+                              : "text-rose-400 font-bold"
+                            : isLight
+                              ? "text-slate-800"
+                              : "text-slate-300"
+                        }`}
+                      >
+                        {caddScore.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className={isLight ? "text-slate-400" : "text-slate-600"}>—</span>
+                    )}
+                  </td>
+
+                  {/* Condition */}
+                  <td
+                    className={`py-2.5 px-3 font-sans max-w-[180px] ${
+                      isLight ? "text-slate-800" : "text-slate-300"
+                    }`}
+                  >
+                    {disease ? (
+                      <span className="truncate block text-xs" title={disease}>
+                        {disease}
+                      </span>
+                    ) : (
+                      <span className={isLight ? "text-slate-400 text-xs" : "text-slate-600 text-xs"}>—</span>
+                    )}
+                  </td>
+
+                  {/* Action */}
+                  <td className="py-2.5 px-3 text-right">
                     <span
-                      className={`inline-flex items-center group-hover:text-orange-400 group-hover:translate-x-0.5 transition-all ${theme === "dark" ? "text-zinc-500" : "text-stone-500"}`}
+                      className={`inline-flex items-center justify-center w-6 h-6 rounded transition-colors ${
+                        isSelected
+                          ? isLight
+                            ? "text-cyan-700 font-bold"
+                            : "text-cyan-400 font-bold"
+                          : isLight
+                            ? "text-slate-400 group-hover:text-cyan-700"
+                            : "text-slate-500 group-hover:text-cyan-400"
+                      }`}
                     >
                       <ChevronRight size={15} />
                     </span>
@@ -330,8 +478,18 @@ export default function VariantTable({
                 </tr>
               );
             })}
+
             {filteredAndSorted.length === 0 && (
-              <tr><td colSpan="8" className={`px-4 py-12 text-center text-sm ${theme === "dark" ? "text-zinc-400" : "text-slate-600"}`}>No variants match “{searchTerm}”. Try a chromosome, position, allele, classification, or condition.</td></tr>
+              <tr>
+                <td
+                  colSpan="12"
+                  className={`px-4 py-8 text-center text-xs font-sans ${
+                    isLight ? "text-slate-600" : "text-slate-400"
+                  }`}
+                >
+                  No variants match “{searchTerm}”.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -339,49 +497,25 @@ export default function VariantTable({
 
       {/* Footer statistics */}
       <div
-        className={`p-3.5 border-t flex items-center justify-between text-xs ${theme === "dark" ? "border-zinc-800 bg-zinc-950/40 text-zinc-500" : "border-stone-300 bg-stone-100/80 text-stone-600"}`}
+        className={`p-3 border-t flex items-center justify-between text-xs font-sans ${
+          isLight
+            ? "border-slate-300 bg-slate-50 text-slate-700"
+            : "border-slate-800 bg-[#080d18] text-slate-400"
+        }`}
       >
         <div>
-          Showing{" "}
-          <span
-            className={`font-medium ${theme === "dark" ? "text-zinc-300" : "text-stone-800"}`}
-          >
-            {filteredAndSorted.length}
-          </span>{" "}
-          of{" "}
-          <span
-            className={`font-medium ${theme === "dark" ? "text-zinc-300" : "text-stone-800"}`}
-          >
-            {variants.length}
-          </span>{" "}
-          variants
+          Showing <span className={`font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>{filteredAndSorted.length}</span> of{" "}
+          <span className={`font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>{variants.length}</span> variants
         </div>
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5 text-orange-400 font-medium">
-            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-            {
-              variants.filter(
-                (v) => (v.status || "").toLowerCase() === "pathogenic",
-              ).length
-            }{" "}
-            Pathogenic
+        <div className="flex items-center gap-4 font-mono text-xs">
+          <span className={isLight ? "text-rose-700 font-semibold" : "text-rose-400 font-semibold"}>
+            {variants.filter((v) => (v.status || "").toLowerCase() === "pathogenic").length} Pathogenic
           </span>
-          <span className="flex items-center gap-1.5 text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            {
-              variants.filter(
-                (v) => (v.status || "").toLowerCase() === "benign",
-              ).length
-            }{" "}
-            Benign
+          <span className={isLight ? "text-purple-700 font-semibold" : "text-purple-400 font-semibold"}>
+            {variants.filter((v) => (v.status || "").toLowerCase() === "vus").length} VUS
           </span>
-          <span className="flex items-center gap-1.5 text-amber-400">
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            {
-              variants.filter((v) => (v.status || "").toLowerCase() === "vus")
-                .length
-            }{" "}
-            VUS
+          <span className={isLight ? "text-emerald-700 font-semibold" : "text-emerald-400 font-semibold"}>
+            {variants.filter((v) => (v.status || "").toLowerCase() === "benign").length} Benign
           </span>
         </div>
       </div>

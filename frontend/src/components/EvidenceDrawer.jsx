@@ -8,38 +8,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   HelpCircle,
-  Dna,
   Stethoscope,
 } from "lucide-react";
 import { fetchEvidenceForVariant } from "../lib/api";
-
-function MetricCard({ icon: Icon, label, value, sublabel, highlight }) {
-  return (
-    <div
-      className={`p-4 rounded-xl border transition-all ${
-        highlight
-          ? "bg-orange-500/10 border-orange-500/30"
-          : "bg-zinc-900 border-zinc-800 hover:border-zinc-700"
-      }`}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <Icon
-          size={14}
-          className={highlight ? "text-orange-400" : "text-zinc-500"}
-        />
-        <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400">
-          {label}
-        </span>
-      </div>
-      <div className="text-xl font-bold font-mono text-white tracking-tight">
-        {value}
-      </div>
-      {sublabel && (
-        <div className="text-[11px] text-zinc-400 mt-1">{sublabel}</div>
-      )}
-    </div>
-  );
-}
 
 function getDisease(evidence, variant) {
   if (evidence?.disease) return evidence.disease;
@@ -52,18 +23,19 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
   const [evidence, setEvidence] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState("overview");
+
+  const isLight = theme === "light";
 
   useEffect(() => {
     if (!variant) return;
 
-    // Use embedded evidence if present
     if (variant.evidence) {
       setEvidence(variant.evidence);
       setError(null);
       return;
     }
 
-    // Otherwise fetch from database API
     let isCancelled = false;
     setLoading(true);
     setError(null);
@@ -79,7 +51,7 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
         if (!isCancelled) {
           setError(
             err.response?.status === 404
-              ? "No model evidence recorded yet. Run the analysis pipeline to generate predictions."
+              ? "No model evidence recorded yet. Run variant analysis to compute predictions."
               : "Failed to load evidence details.",
           );
           setEvidence(null);
@@ -97,9 +69,9 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
   const status = (variant.status || "pending").toLowerCase();
   const isPathogenic = status === "pathogenic";
 
-  // Extract ClinVar status — prefer dedicated field, fall back to parsing explanation string
+  // ClinVar status
   let clinVarNote = evidence?.clinvar_status || null;
-  let cleanExplanation = evidence?.shap_explanation || "";
+  const cleanExplanation = evidence?.shap_explanation || "";
   if (!clinVarNote && cleanExplanation.includes("ClinVar:")) {
     const parts = cleanExplanation.split(/ClinVar:\s*/i);
     if (parts.length > 1) {
@@ -108,235 +80,453 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
   }
 
   const mlScore = evidence?.ml_score;
-  const isHighRisk = mlScore != null && mlScore >= 0.8;
+  const caddScore = evidence?.conservation_score;
+  const afValue = evidence?.frequency;
   const disease = getDisease(evidence, variant);
+  const gene = variant.gene || variant.evidence?.gene || null;
 
   return (
     <>
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-black/70 backdrop-blur-xs z-40 transition-opacity"
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 transition-opacity"
       />
 
-      {/* Slide-in Drawer */}
+      {/* Slide-out Inspector Panel */}
       <div
-        className={`fixed top-0 right-0 bottom-0 w-full max-w-md border-l z-50 flex flex-col shadow-2xl animate-drawer-in overflow-hidden ${theme === "dark" ? "bg-zinc-950 border-zinc-800" : "bg-stone-100 border-stone-300"}`}
+        className={`fixed top-0 right-0 bottom-0 w-full max-w-lg z-50 flex flex-col shadow-2xl overflow-hidden border-l transition-colors ${
+          isLight
+            ? "bg-white border-slate-300 text-slate-900"
+            : "bg-[#0b101c] border-slate-800 text-slate-100"
+        }`}
       >
         {/* Header */}
         <div
-          className={`p-6 border-b flex items-start justify-between ${theme === "dark" ? "border-zinc-800 bg-zinc-900/60" : "border-stone-300 bg-stone-50/90"}`}
+          className={`p-4 border-b flex items-start justify-between ${
+            isLight ? "border-slate-300 bg-slate-50" : "border-slate-800 bg-[#090d18]"
+          }`}
         >
           <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="bg-orange-500/10 text-orange-400 border border-orange-500/30 text-xs font-semibold px-2 py-0.5 rounded font-mono">
-                chr{variant.chrom}:{variant.pos?.toLocaleString()}
-              </span>
-              {isPathogenic ? (
-                <span className="badge-pathogenic text-[10px] font-bold px-2 py-0.5 rounded uppercase flex items-center gap-1">
-                  <AlertTriangle size={11} /> Pathogenic
-                </span>
-              ) : status === "benign" ? (
-                <span className="badge-benign text-[10px] font-bold px-2 py-0.5 rounded uppercase flex items-center gap-1">
-                  <CheckCircle2 size={11} /> Benign
-                </span>
-              ) : status === "vus" ? (
-                <span className="badge-vus text-[10px] font-bold px-2 py-0.5 rounded uppercase flex items-center gap-1">
-                  <HelpCircle size={11} /> VUS
-                </span>
-              ) : (
-                <span className="badge-pending text-[10px] font-bold px-2 py-0.5 rounded uppercase">
-                  Pending
-                </span>
-              )}
-            </div>
-            <h2
-              className={`text-lg font-bold tracking-tight flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-stone-900"}`}
+            <div
+              className={`text-xs font-semibold uppercase tracking-wider font-sans mb-1 ${
+                isLight ? "text-slate-600" : "text-slate-400"
+              }`}
             >
-              <span>{variant.ref}</span>
-              <span className="text-zinc-500">→</span>
-              <span className="text-orange-400">{variant.alt}</span>
-              <span className="text-zinc-400 text-xs font-normal font-sans ml-2">
-                (Substitution)
+              Variant Inspector
+            </div>
+            <div
+              className={`font-mono text-base font-bold ${
+                isLight ? "text-slate-900" : "text-white"
+              }`}
+            >
+              chr{variant.chrom}:{variant.pos?.toLocaleString()}{" "}
+              <span className={isLight ? "text-slate-500" : "text-slate-400"}>{variant.ref}</span> &gt;{" "}
+              <span className={isLight ? "text-cyan-700 font-extrabold" : "text-cyan-400 font-extrabold"}>
+                {variant.alt}
               </span>
-            </h2>
+            </div>
+            {gene && (
+              <div
+                className={`text-xs font-mono font-bold mt-0.5 ${
+                  isLight ? "text-cyan-800" : "text-cyan-300"
+                }`}
+              >
+                Gene: {gene}
+              </div>
+            )}
           </div>
 
           <button
             onClick={onClose}
-            className={`p-1.5 rounded-lg border transition-colors ${theme === "dark" ? "text-zinc-400 hover:text-white hover:bg-zinc-800 border-zinc-800" : "text-stone-600 hover:text-stone-900 hover:bg-stone-200 border-stone-300"}`}
+            className={`p-1.5 rounded-md border transition-colors ${
+              isLight
+                ? "text-slate-600 hover:text-slate-900 hover:bg-slate-200 border-slate-300"
+                : "text-slate-400 hover:text-white hover:bg-slate-800 border-slate-700"
+            }`}
+            title="Close inspector"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Status bar */}
+        <div
+          className={`px-4 py-2 border-b flex items-center justify-between text-xs ${
+            isLight ? "border-slate-200 bg-slate-100/70" : "border-slate-800 bg-[#0c1220]"
+          }`}
+        >
+          <span className={`font-mono ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+            chr{variant.chrom}:{variant.pos}
+          </span>
+          <div>
+            {isPathogenic ? (
+              <span className="badge-pathogenic inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded">
+                <AlertTriangle size={12} /> Pathogenic
+              </span>
+            ) : status === "benign" ? (
+              <span className="badge-benign inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded">
+                <CheckCircle2 size={12} /> Benign
+              </span>
+            ) : status === "vus" ? (
+              <span className="badge-vus inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded">
+                <HelpCircle size={12} /> VUS
+              </span>
+            ) : (
+              <span className="badge-pending inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded">
+                Pending
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div
+          className={`flex items-center gap-5 px-4 border-b text-xs font-medium ${
+            isLight ? "border-slate-200 bg-white" : "border-slate-800 bg-[#090d18]"
+          }`}
+        >
+          {["overview", "evidence", "explanation", "raw"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              className={`py-2.5 border-b-2 capitalize transition-colors ${
+                activeTab === t
+                  ? isLight
+                    ? "border-cyan-600 text-cyan-800 font-bold"
+                    : "border-cyan-500 text-cyan-400 font-semibold"
+                  : isLight
+                    ? "border-transparent text-slate-600 hover:text-slate-900"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {t === "explanation" ? "ML Explanation" : t === "raw" ? "Raw Data" : t}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Body */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {loading && (
-            <div className="py-12 text-center">
-              <div className="w-8 h-8 border-2 border-zinc-700 border-t-orange-500 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-xs text-zinc-400">
-                Loading variant evidence...
-              </p>
+            <div className={`py-12 text-center text-xs ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+              Loading variant evidence...
             </div>
           )}
 
           {error && !loading && (
-            <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-center">
-              <HelpCircle size={24} className="mx-auto text-zinc-500 mb-2" />
-              <p
-                className={`text-xs font-medium ${theme === "dark" ? "text-zinc-300" : "text-stone-700"}`}
-              >
-                {error}
-              </p>
-              <p
-                className={`text-[11px] mt-1 ${theme === "dark" ? "text-zinc-500" : "text-stone-600"}`}
-              >
-                Click "Run Analysis" on the dashboard to compute ML
-                pathogenicity and SHAP scores.
-              </p>
+            <div
+              className={`p-3 rounded-lg border text-center space-y-1 ${
+                isLight
+                  ? "bg-slate-100 border-slate-300 text-slate-800"
+                  : "bg-slate-900 border-slate-700 text-slate-200"
+              }`}
+            >
+              <p className="text-xs font-semibold m-0">{error}</p>
             </div>
           )}
 
-          {evidence && !loading && (
+          {!loading && !error && (
             <>
-              {/* Primary Risk Card */}
-              <div
-                className={`p-5 rounded-xl border ${
-                  isHighRisk
-                    ? "bg-gradient-to-br from-orange-500/15 via-zinc-900 to-zinc-900 border-orange-500/40 shadow-lg shadow-orange-500/5"
-                    : "bg-zinc-900 border-zinc-800"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Brain
-                      size={16}
-                      className={
-                        isHighRisk ? "text-orange-400" : "text-zinc-400"
-                      }
-                    />
-                    <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                      ML Pathogenicity Score
-                    </span>
-                  </div>
-                  <span
-                    className={`text-2xl font-black font-mono ${
-                      isHighRisk ? "text-orange-400" : "text-emerald-400"
+              {/* Tab 1: Overview */}
+              {activeTab === "overview" && (
+                <div className="space-y-3">
+                  {/* ML Risk Score */}
+                  <div
+                    className={`rounded-lg p-3.5 border ${
+                      isLight ? "bg-slate-50 border-slate-300" : "bg-[#0c1220] border-slate-800"
                     }`}
                   >
-                    {mlScore != null ? (mlScore * 100).toFixed(1) + "%" : "—"}
-                  </span>
-                </div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className={`text-xs font-semibold ${isLight ? "text-slate-800" : "text-slate-200"}`}>
+                        ML Risk Score
+                      </span>
+                      <span
+                        className={`font-mono font-bold text-base ${
+                          mlScore != null && mlScore >= 0.8
+                            ? isLight
+                              ? "text-rose-700"
+                              : "text-rose-400"
+                            : mlScore != null && mlScore < 0.2
+                              ? isLight
+                                ? "text-emerald-700"
+                                : "text-emerald-400"
+                              : isLight
+                                ? "text-purple-700"
+                                : "text-purple-300"
+                        }`}
+                      >
+                        {mlScore != null ? mlScore.toFixed(3) : "—"}
+                      </span>
+                    </div>
 
-                <div className="w-full h-3 rounded-full bg-zinc-950 overflow-hidden border border-zinc-800 p-0.5">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ${
-                      isHighRisk
-                        ? "bg-gradient-to-r from-orange-600 to-orange-400"
-                        : "bg-gradient-to-r from-emerald-600 to-emerald-400"
-                    }`}
-                    style={{ width: `${Math.min((mlScore ?? 0) * 100, 100)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-zinc-500 mt-1.5 font-mono">
-                  <span>0.0 (Benign)</span>
-                  <span>0.2 / 0.8</span>
-                  <span>1.0 (Pathogenic)</span>
-                </div>
-              </div>
+                    <div
+                      className={`w-full h-2 rounded-full overflow-hidden mb-2 ${
+                        isLight ? "bg-slate-200" : "bg-slate-800"
+                      }`}
+                    >
+                      <div
+                        className={`h-full ${
+                          mlScore != null && mlScore >= 0.8
+                            ? "bg-rose-500"
+                            : mlScore != null && mlScore < 0.2
+                              ? "bg-emerald-500"
+                              : "bg-purple-500"
+                        }`}
+                        style={{ width: `${Math.min((mlScore ?? 0) * 100, 100)}%` }}
+                      />
+                    </div>
 
-              {/* 2x2 Metric Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <MetricCard
-                  icon={Activity}
-                  label="Allele Frequency"
-                  value={
-                    evidence.frequency != null
-                      ? evidence.frequency === 0
-                        ? "< 0.00001"
-                        : evidence.frequency.toFixed(5)
-                      : "—"
-                  }
-                  sublabel={
-                    evidence.frequency != null
-                      ? evidence.frequency < 0.01
-                        ? "Ultra-rare in population"
-                        : "Common polymorphism"
-                      : null
-                  }
-                  highlight={
-                    evidence.frequency != null && evidence.frequency < 0.01
-                  }
-                />
-
-                <MetricCard
-                  icon={Database}
-                  label="CADD Score"
-                  value={
-                    evidence.conservation_score != null
-                      ? evidence.conservation_score.toFixed(1)
-                      : "—"
-                  }
-                  sublabel={
-                    evidence.conservation_score != null
-                      ? evidence.conservation_score > 25
-                        ? "Top 0.5% deleterious"
-                        : "Low deleteriousness"
-                      : null
-                  }
-                  highlight={
-                    evidence.conservation_score != null &&
-                    evidence.conservation_score > 25
-                  }
-                />
-
-                <MetricCard
-                  icon={BarChart3}
-                  label="ClinVar Status"
-                  value={
-                    clinVarNote ||
-                    (isPathogenic
-                      ? "Pathogenic"
-                      : status === "benign"
-                        ? "Benign"
-                        : "Reported")
-                  }
-                  sublabel="Clinical database record"
-                />
-
-                <MetricCard
-                  icon={Dna}
-                  label="Model Engine"
-                  value="RandomForest"
-                  sublabel="Trained on CADD & AF"
-                />
-              </div>
-
-              <div className={`p-4 rounded-xl border ${disease ? "bg-teal-500/10 border-teal-500/25" : "bg-zinc-900 border-zinc-800"}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Stethoscope size={14} className={disease ? "text-teal-300" : "text-zinc-500"} />
-                  <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400">Tested Condition</span>
-                </div>
-                <p className={`m-0 text-sm leading-relaxed ${disease ? "text-teal-50" : "text-zinc-400"}`}>
-                  {disease || "No condition association was returned for this variant."}
-                </p>
-                <p className="m-0 mt-2 text-[10px] text-zinc-500">Condition associations require clinical correlation and source review.</p>
-              </div>
-
-              {/* SHAP Explanation */}
-              {evidence.shap_explanation && (
-                <div className="p-5 rounded-xl bg-zinc-900 border border-zinc-800">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Brain size={15} className="text-orange-400" />
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-200 m-0">
-                      SHAP Interpretability
-                    </h4>
+                    <div className={`flex justify-between text-[10px] ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                      <span>&lt;0.20 Benign</span>
+                      <span>0.20–0.79 VUS</span>
+                      <span>&gt;=0.80 Pathogenic</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-zinc-300 leading-relaxed font-sans bg-zinc-950/80 p-3.5 rounded-lg border border-zinc-800/80 m-0">
-                    {evidence.shap_explanation}
-                  </p>
+
+                  {/* Specification List */}
+                  <dl className="space-y-1.5 text-xs">
+                    <div
+                      className={`flex justify-between py-1 border-b ${
+                        isLight ? "border-slate-200 text-slate-800" : "border-slate-800 text-slate-200"
+                      }`}
+                    >
+                      <dt className={isLight ? "text-slate-600" : "text-slate-400"}>Chromosome</dt>
+                      <dd className="font-mono font-semibold">chr{variant.chrom}</dd>
+                    </div>
+                    <div
+                      className={`flex justify-between py-1 border-b ${
+                        isLight ? "border-slate-200 text-slate-800" : "border-slate-800 text-slate-200"
+                      }`}
+                    >
+                      <dt className={isLight ? "text-slate-600" : "text-slate-400"}>Position</dt>
+                      <dd className="font-mono font-bold">{variant.pos?.toLocaleString()}</dd>
+                    </div>
+                    <div
+                      className={`flex justify-between py-1 border-b ${
+                        isLight ? "border-slate-200 text-slate-800" : "border-slate-800 text-slate-200"
+                      }`}
+                    >
+                      <dt className={isLight ? "text-slate-600" : "text-slate-400"}>Alleles</dt>
+                      <dd className="font-mono font-bold">{variant.ref} &rarr; {variant.alt}</dd>
+                    </div>
+                    {gene && (
+                      <div
+                        className={`flex justify-between py-1 border-b ${
+                          isLight ? "border-slate-200 text-slate-800" : "border-slate-800 text-slate-200"
+                        }`}
+                      >
+                        <dt className={isLight ? "text-slate-600" : "text-slate-400"}>Gene</dt>
+                        <dd className={`font-mono font-bold ${isLight ? "text-cyan-800" : "text-cyan-300"}`}>{gene}</dd>
+                      </div>
+                    )}
+                    {variant.rsid && (
+                      <div
+                        className={`flex justify-between py-1 border-b ${
+                          isLight ? "border-slate-200 text-slate-800" : "border-slate-800 text-slate-200"
+                        }`}
+                      >
+                        <dt className={isLight ? "text-slate-600" : "text-slate-400"}>dbSNP</dt>
+                        <dd className="font-mono">{variant.rsid}</dd>
+                      </div>
+                    )}
+                    <div
+                      className={`flex justify-between py-1 border-b ${
+                        isLight ? "border-slate-200 text-slate-800" : "border-slate-800 text-slate-200"
+                      }`}
+                    >
+                      <dt className={isLight ? "text-slate-600" : "text-slate-400"}>ClinVar</dt>
+                      <dd className="font-medium text-right">
+                        {clinVarNote || (isPathogenic ? "Pathogenic" : status === "benign" ? "Benign" : "—")}
+                      </dd>
+                    </div>
+                    <div
+                      className={`flex justify-between py-1 border-b ${
+                        isLight ? "border-slate-200 text-slate-800" : "border-slate-800 text-slate-200"
+                      }`}
+                    >
+                      <dt className={isLight ? "text-slate-600" : "text-slate-400"}>CADD Score</dt>
+                      <dd className="font-mono font-semibold">
+                        {caddScore != null ? caddScore.toFixed(1) : "—"}
+                      </dd>
+                    </div>
+                    <div
+                      className={`flex justify-between py-1 border-b ${
+                        isLight ? "border-slate-200 text-slate-800" : "border-slate-800 text-slate-200"
+                      }`}
+                    >
+                      <dt className={isLight ? "text-slate-600" : "text-slate-400"}>Allele Frequency</dt>
+                      <dd className="font-mono">
+                        {afValue != null
+                          ? afValue === 0
+                            ? "< 0.00001"
+                            : afValue.toFixed(5)
+                          : "—"}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  {/* Condition */}
+                  <div
+                    className={`rounded-lg p-3 border text-xs ${
+                      isLight ? "bg-slate-50 border-slate-300" : "bg-[#0c1220] border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-semibold mb-1">
+                      <Stethoscope size={13} className={isLight ? "text-cyan-700" : "text-cyan-400"} />
+                      <span className={isLight ? "text-slate-800" : "text-slate-200"}>Associated Condition</span>
+                    </div>
+                    <p className={`m-0 leading-relaxed ${isLight ? "text-slate-700" : "text-slate-300"}`}>
+                      {disease || "No specific disease condition reported for this variant."}
+                    </p>
+                  </div>
                 </div>
+              )}
+
+              {/* Tab 2: Evidence */}
+              {activeTab === "evidence" && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div
+                      className={`rounded-lg p-3 border ${
+                        isLight ? "bg-slate-50 border-slate-300" : "bg-[#0c1220] border-slate-800"
+                      }`}
+                    >
+                      <div className={`text-xs flex items-center gap-1 mb-1 ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                        <Activity size={12} className={isLight ? "text-cyan-700" : "text-cyan-400"} />
+                        <span>Allele Frequency</span>
+                      </div>
+                      <div className={`font-mono text-base font-bold ${isLight ? "text-slate-900" : "text-white"}`}>
+                        {afValue != null
+                          ? afValue === 0
+                            ? "< 0.00001"
+                            : afValue.toFixed(5)
+                          : "—"}
+                      </div>
+                      <div className={`text-[10px] mt-1 ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                        {afValue != null && afValue < 0.01
+                          ? "Rare (< 1%)"
+                          : afValue != null
+                            ? "Common polymorphism"
+                            : "Not recorded"}
+                      </div>
+                    </div>
+
+                    <div
+                      className={`rounded-lg p-3 border ${
+                        isLight ? "bg-slate-50 border-slate-300" : "bg-[#0c1220] border-slate-800"
+                      }`}
+                    >
+                      <div className={`text-xs flex items-center gap-1 mb-1 ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                        <Database size={12} className={isLight ? "text-purple-700" : "text-purple-400"} />
+                        <span>CADD Score</span>
+                      </div>
+                      <div className={`font-mono text-base font-bold ${isLight ? "text-slate-900" : "text-white"}`}>
+                        {caddScore != null ? caddScore.toFixed(1) : "—"}
+                      </div>
+                      <div className={`text-[10px] mt-1 ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                        {caddScore != null && caddScore >= 20
+                          ? "Deleterious (Top 1%)"
+                          : "Below deleterious cutoff"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`rounded-lg p-3 border text-xs ${
+                      isLight ? "bg-slate-50 border-slate-300" : "bg-[#0c1220] border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-semibold mb-1">
+                      <BarChart3 size={13} className={isLight ? "text-emerald-700" : "text-emerald-400"} />
+                      <span className={isLight ? "text-slate-800" : "text-slate-200"}>ClinVar Clinical Assertion</span>
+                    </div>
+                    <p className={`m-0 ${isLight ? "text-slate-700" : "text-slate-300"}`}>
+                      {clinVarNote || "No ClinVar assertion available."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: ML Explanation */}
+              {activeTab === "explanation" && (
+                <div className="space-y-3">
+                  <div
+                    className={`rounded-lg p-3 border text-xs ${
+                      isLight ? "bg-slate-50 border-slate-300" : "bg-[#0c1220] border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-semibold mb-1.5">
+                      <Brain size={13} className={isLight ? "text-cyan-700" : "text-cyan-400"} />
+                      <span className={isLight ? "text-slate-800" : "text-slate-200"}>Random Forest Classifier</span>
+                    </div>
+                    <p className={`m-0 mb-2 ${isLight ? "text-slate-700" : "text-slate-300"}`}>
+                      Supervised machine learning model trained strictly on two verified features:
+                    </p>
+                    <ul className={`space-y-1 font-mono text-[11px] pl-4 list-disc m-0 ${isLight ? "text-slate-800" : "text-slate-200"}`}>
+                      <li>
+                        <strong>allele_frequency:</strong> {afValue != null ? afValue : "unannotated"}
+                      </li>
+                      <li>
+                        <strong>cadd_score:</strong> {caddScore != null ? caddScore : "unannotated"}
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div
+                    className={`rounded-lg p-3 border text-xs ${
+                      isLight ? "bg-slate-50 border-slate-300" : "bg-[#0c1220] border-slate-800"
+                    }`}
+                  >
+                    <div className={`font-semibold mb-1.5 ${isLight ? "text-slate-800" : "text-slate-200"}`}>
+                      Feature-Based Explanation
+                    </div>
+                    {evidence?.shap_explanation ? (
+                      <p
+                        className={`font-mono text-xs leading-relaxed p-2.5 rounded border m-0 ${
+                          isLight
+                            ? "bg-white border-slate-300 text-slate-900"
+                            : "bg-[#080d18] border-slate-800 text-slate-100"
+                        }`}
+                      >
+                        {evidence.shap_explanation}
+                      </p>
+                    ) : (
+                      <p className={`m-0 ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                        No explanation available. Run variant analysis to compute predictions.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 4: Raw Data */}
+              {activeTab === "raw" && (
+                <pre
+                  className={`text-[11px] font-mono p-3 rounded-lg border overflow-x-auto ${
+                    isLight
+                      ? "bg-slate-50 border-slate-300 text-slate-900"
+                      : "bg-[#080d18] border-slate-800 text-slate-200"
+                  }`}
+                >
+                  {JSON.stringify(
+                    {
+                      variant: {
+                        id: variant.id,
+                        chrom: variant.chrom,
+                        pos: variant.pos,
+                        ref: variant.ref,
+                        alt: variant.alt,
+                        gene: variant.gene,
+                        rsid: variant.rsid,
+                        genomeBuild: variant.genomeBuild,
+                        status: variant.status,
+                      },
+                      evidence: evidence,
+                    },
+                    null,
+                    2,
+                  )}
+                </pre>
               )}
             </>
           )}
@@ -344,14 +534,22 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
 
         {/* Footer */}
         <div
-          className={`p-4 border-t flex items-center justify-between text-xs ${theme === "dark" ? "border-zinc-800 bg-zinc-900/80 text-zinc-500" : "border-stone-300 bg-stone-50 text-stone-600"}`}
+          className={`p-3 border-t flex items-center justify-between text-xs font-mono ${
+            isLight
+              ? "border-slate-300 bg-slate-50 text-slate-600"
+              : "border-slate-800 bg-[#090d18] text-slate-400"
+          }`}
         >
-          <span>Variant ID: {variant.id.slice(0, 8)}...</span>
+          <span>ID: {variant.id.slice(0, 8)}...</span>
           <button
             onClick={onClose}
-            className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${theme === "dark" ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-300" : "bg-stone-200 hover:bg-stone-300 text-stone-800"}`}
+            className={`px-2.5 py-1 rounded text-xs font-sans transition-colors ${
+              isLight
+                ? "bg-slate-200 hover:bg-slate-300 text-slate-800 font-medium"
+                : "bg-slate-800 hover:bg-slate-700 text-slate-200"
+            }`}
           >
-            Close Panel
+            Close
           </button>
         </div>
       </div>

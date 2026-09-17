@@ -91,9 +91,10 @@ router.post('/upload', (req, res, next) => {
           ref: String(v.ref),
           alt: String(v.alt),
           qual: v.qual !== null && v.qual !== undefined ? parseFloat(v.qual) : null,
-          status: v.clinvar_status && ['pathogenic', 'benign', 'vus'].includes(v.clinvar_status.toLowerCase())
-            ? (v.clinvar_status.charAt(0).toUpperCase() + v.clinvar_status.slice(1).toLowerCase())
-            : 'pending',
+          rsid: v.rsid || null,
+          gene: v.gene || null,
+          genomeBuild: parsedVariants.referenceBuild || v.referenceBuild || 'hg19',
+          status: 'pending',
         }));
 
         // Batch-insert records into Variant table (in chunks of 1000 for SQLite optimization)
@@ -106,41 +107,19 @@ router.post('/upload', (req, res, next) => {
           totalInserted += result.count;
         }
 
-        // Attach initial disease / evidence records if annotated in VCF
-        const createdVariants = await prisma.variant.findMany({
-          where: { patientId: patient.id },
-          orderBy: { pos: 'asc' },
-        });
+        // Keep a persistent copy of the source VCF for the patient record
+        const persistentVcfPath = path.join(uploadDir, `${patient.id}.vcf`);
+        try {
+          fs.copyFileSync(filePath, persistentVcfPath);
+        } catch (_) {}
 
-        const { GENE_DISEASE_MAP } = require('../services/annotationService');
-
-        for (let i = 0; i < createdVariants.length && i < parsedVariants.length; i++) {
-          const pv = parsedVariants[i];
-          const cv = createdVariants[i];
-          let initialDisease = pv.disease || null;
-          if (!initialDisease && pv.gene && GENE_DISEASE_MAP[pv.gene.toUpperCase()]) {
-            initialDisease = GENE_DISEASE_MAP[pv.gene.toUpperCase()];
-          }
-
-          if (initialDisease || pv.clinvar_status) {
-            await prisma.evidence.create({
-              data: {
-                variantId: cv.id,
-                frequency: pv.af !== null && !isNaN(pv.af) ? pv.af : 0,
-                conservation_score: 0,
-                ml_score: pv.clinvar_status?.toLowerCase() === 'pathogenic' ? 0.95 : (pv.clinvar_status?.toLowerCase() === 'benign' ? 0.05 : 0.5),
-                clinvar_status: pv.clinvar_status || null,
-                disease: initialDisease,
-                shap_explanation: `Ingested from VCF annotation${pv.gene ? ` (Gene: ${pv.gene})` : ''}${initialDisease ? ` (Disease: ${initialDisease})` : ''}`,
-              },
-            }).catch(() => {});
-          }
-        }
+        // Evidence is written only after /api/analyze so the UI cannot show
+        // placeholder AF=0 / ml_score defaults as finished predictions.
       }
 
       // 3. Delete the temporary uploaded file
       if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+        try { fs.unlinkSync(filePath); } catch (_) {}
       }
 
       // 4. Fetch full patient with variants to return to frontend

@@ -1,10 +1,17 @@
 ##fileformat=VCFv4.2
-##source=SIH_Genomic_Platform_hg19
+##fileDate=20260917
+##source=GenomicPlatformClinicalVCF_v2.0
 ##reference=hg19
+##INFO=<ID=GENE,Number=1,Type=String,Description="Associated Gene Symbol">
+##INFO=<ID=CLNSIG,Number=.,Type=String,Description="ClinVar Clinical Significance">
+##INFO=<ID=CLNDN,Number=.,Type=String,Description="ClinVar Disease/Phenotype Name">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Population Allele Frequency (gnomAD/1000G)">
+##INFO=<ID=CADD,Number=A,Type=Float,Description="CADD Phred-scaled Deleteriousness Score">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	PATIENT_01
-7	140453136	rs113488022	A	T	99	PASS	.	GT	0/1
-12	25398284	rs121913529	C	T	99	PASS	.	GT	0/1
-17	7531038	rs28934578	G	A	99	PASS	.	GT	0/1
-3	178936091	rs121913229	G	A	99	PASS	.	GT	0/1
-1	11856378	rs1801133	G	A	99	PASS	.	GT	0/1
-15	28365618	rs12913832	A	G	99	PASS	.	GT	0/1
+chr7	140453136	rs113488022	A	T	99	PASS	GENE=BRAF;CLNSIG=Pathogenic;CLNDN=Colorectal_carcinoma;AF=0.000004;CADD=32.0	GT	0/1
+chr12	25398284	rs121913529	C	T	99	PASS	GENE=KRAS;CLNSIG=Pathogenic;CLNDN=Pancreatic_and_colorectal_carcinoma;AF=0.00001;CADD=29.0	GT	0/1
+chr17	7577120	rs28934578	C	T	99	PASS	GENE=TP53;CLNSIG=Pathogenic;CLNDN=Li-Fraumeni_syndrome;AF=0.00002;CADD=33.0	GT	0/1
+chr17	41276045	rs80357906	C	T	99	PASS	GENE=BRCA1;CLNSIG=Pathogenic;CLNDN=Hereditary_breast_and_ovarian_cancer_syndrome;AF=0.00001;CADD=28.5	GT	0/1
+chr3	178936091	rs121913229	G	A	99	PASS	GENE=PIK3CA;CLNSIG=Pathogenic;CLNDN=Breast_cancer;AF=0.00001;CADD=27.8	GT	0/1
+chr1	11856378	rs1801133	G	A	99	PASS	GENE=MTHFR;CLNSIG=Benign;CLNDN=Hyperhomocysteinemia;AF=0.32;CADD=12.0	GT	0/1
