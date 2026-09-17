@@ -186,49 +186,67 @@ Open **`http://localhost:5173`** in your browser.
 
 ```
 genomic_platform/
-├── backend/                       # Node.js + Express API server
+├── backend/                       # Node.js + Express API server (Port 3001)
 │   ├── prisma/                    # Prisma SQLite schema & migrations
-│   │   └── schema.prisma          # Patient, Variant, Evidence models
+│   │   ├── schema.prisma          # Patient, Variant, Evidence relational models
+│   │   └── seed.js                # Database seeding script
 │   ├── routes/                    # API route controllers
-│   │   └── upload.js              # Multi-part VCF upload & ingestion
-│   ├── services/                  # Core pipeline services
-│   │   ├── annotationService.js   # MyVariant.info, Ensembl & ClinVar resolution
-│   │   ├── pipelineService.js     # ML orchestration & SQLite upserts
+│   │   └── upload.js              # Multi-part VCF upload, validation & ingestion
+│   ├── services/                  # Core bioinformatics & pipeline services
+│   │   ├── annotationService.js   # Multi-tier annotation (MyVariant, Ensembl, local ClinVar/CADD)
+│   │   ├── pipelineService.js     # Orchestration, ML batching & SQLite upserts
 │   │   └── vcfParser.js           # Line-by-line stream VCF parser
+│   ├── test_data/                 # Backend test datasets
+│   │   ├── sample.vcf             # Minimal 6-variant pipeline test file
+│   │   └── SIH_Live_Demo.vcf      # 10-variant live hackathon presentation dataset
+│   ├── uploads/                   # Staged upload directory (.gitkeep)
 │   ├── server.js                  # Express application entry point
-│   └── test-pipeline.js           # Integration test suite
+│   ├── test-db.js                 # Prisma SQLite database verification script
+│   ├── test-pipeline.js           # End-to-end annotation & ML test script
+│   └── test-upload.js             # Multipart upload verification script
 │
-├── frontend/                      # React + Vite client application
+├── frontend/                      # React 19 + Vite client dashboard (Port 5173)
 │   ├── public/                    # Static assets
-│   │   ├── favicon.svg            # Custom DNA helix tab icon
-│   │   └── dna-helix.png          # Low-opacity 3D molecular background
+│   │   ├── favicon.svg            # Custom DNA double-helix SVG favicon
+│   │   └── dna-helix.png          # High-resolution molecular background asset
 │   └── src/
 │       ├── components/            # UI components
-│       │   ├── EvidenceDrawer.jsx # Slide-out variant evidence inspector
-│       │   ├── ExportReportButton.jsx # Vector PDF report generator
-│       │   ├── FileUpload.jsx     # Hero VCF ingestion component
-│       │   ├── NotFoundPage.jsx   # Fallback 404 handler
-│       │   └── VariantTable.jsx   # Multi-field searchable variant grid
-│       ├── lib/                   # API clients & utilities
-│       │   └── api.js             # Axios client for backend endpoints
-│       ├── App.jsx                # Main application layout & state
-│       ├── index.css              # Design system & accessible themes
-│       └── main.jsx               # React DOM mount point
+│       │   ├── EvidenceDrawer.jsx # Slide-out clinical variant evidence inspector
+│       │   ├── ExportReportButton.jsx # Vector PDF clinical report generator
+│       │   ├── FileUpload.jsx     # Drag-and-drop VCF ingestion hero & sample downloader
+│       │   ├── NotFoundPage.jsx   # Clinical 404 fallback page
+│       │   └── VariantTable.jsx   # High-density multi-field searchable variant table
+│       ├── lib/                   # API clients & utility functions
+│       │   ├── api.js             # Axios client for backend endpoints
+│       │   └── utils.js           # Formatting and styling helper utilities
+│       ├── App.jsx                # Root application layout, navigation & state
+│       ├── index.css              # Design system styling & high-contrast themes
+│       └── main.jsx               # React DOM application mount point
 │
-├── ml-service/                    # Python FastAPI machine learning microservice
-│   ├── data/                      # Training datasets & CADD caches
+├── ml-service/                    # Python FastAPI machine learning microservice (Port 8000)
+│   ├── data/                      # Training datasets & CADD PHRED lookup caches
 │   │   ├── model_training_data.csv# Curated ClinVar training dataset
-│   │   └── cadd_results.tsv.gz    # Compressed CADD PHRED lookup cache
+│   │   └── cadd_results.tsv.gz    # Compressed CADD PHRED score cache
+│   ├── clean_training_data.py     # Final training dataset cleaning & balancing
+│   ├── evaluate.py                # Model evaluation (ROC-AUC, PR-AUC, metrics)
 │   ├── main.py                    # FastAPI application & /predict endpoint
-│   ├── train_model.py             # RandomForest training script
-│   ├── requirements.txt           # Python dependencies (uvicorn, fastapi, scikit-learn, pandas)
-│   └── model.pkl                  # Serialized RandomForest model artifact
+│   ├── make_cadd_input.py         # CADD batch coordinate input generator
+│   ├── make_training_subset.py    # Stratified ClinVar training subset builder
+│   ├── merge_dataset.py           # Feature merger combining ClinVar & CADD scores
+│   ├── model.pkl                  # Serialized RandomForest model artifact
+│   ├── prepare_dataset.py         # ClinVar raw VCF parser & label extractor
+│   ├── requirements.txt           # Python dependencies (fastapi, uvicorn, scikit-learn, pandas)
+│   ├── test_predict.py            # ML microservice unit test script
+│   └── train_model.py             # RandomForest model training & serialization
 │
-├── sample_patient.vcf             # Verified test VCF with 10 clinical profiles
-├── heavy_pathogenic.vcf           # High-risk cancer profile test VCF
-├── mixed_profile.vcf              # Mixed clinical profile test VCF
-├── patient.vcf                    # Standard patient test VCF
-└── README.md                      # Platform documentation
+├── scripts/                       # Utility & presentation scripts
+│   └── generate_sih_demo.js       # Generates SIH_Live_Demo.vcf for presentations
+│
+├── sample_patient.vcf             # Primary curated test VCF (10 balanced clinical profiles)
+├── heavy_pathogenic.vcf           # High-risk oncology profile test VCF (5 pathogenic + 1 benign)
+├── mixed_profile.vcf              # Mixed clinical profile test VCF (2 pathogenic + 4 benign)
+├── LICENSE                        # Project license
+└── README.md                      # Comprehensive platform documentation
 ```
 
 ---
@@ -298,13 +316,16 @@ model Evidence {
 | :--- | :--- | :--- |
 | `GET` | `/health` | Service health, model type, and feature schema verification |
 | `GET` | `/model-info` | Metadata on trained model, dataset size, and input features |
-| `POST` | `/predict` | Batch prediction endpoint: accepts `[{ allele_frequency, cadd_score }]` and returns `[{ ml_score, classification, shap_explanation }]` |
+| `POST` | `/predict` | Batch prediction: accepts `[{ allele_frequency, cadd_score }]` and returns predictions |
 
 ---
 
-## Sample Testing VCF
+## Sample Testing VCFs
 
-The repository includes a curated sample file [`sample_patient.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/sample_patient.vcf) containing 10 diverse variants spanning high-risk oncogenes, recessive carrier status, and common benign polymorphisms:
+The repository includes curated, production-grade test VCF files designed to validate clinical classification accuracy across oncology, rare disease, carrier status, and benign polymorphisms:
+
+### 1. Primary Test Profile — [`sample_patient.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/sample_patient.vcf)
+A comprehensive 10-variant profile covering actionable oncogenes, cystic fibrosis carrier status, and diverse benign polymorphisms:
 
 | Variant Coordinate | Gene | Associated Clinical Condition | ClinVar Assertion | Expected Status |
 | :--- | :--- | :--- | :--- | :--- |
@@ -319,8 +340,13 @@ The repository includes a curated sample file [`sample_patient.vcf`](file:///C:/
 | `chr22:19951271 G>A` | *COMT* | Pain Sensitivity Modulation | Benign | **Benign** (Score: ~0.000) |
 | `chr11:66560624 C>T` | *ACTN3* | Athletic Performance Polymorphism | Benign | **Benign** (Score: ~0.000) |
 
+### 2. Specialized Profiles
+- **[`heavy_pathogenic.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/heavy_pathogenic.vcf)** — High-risk cancer profile containing 5 high-penetrance oncogenic variants (*BRAF*, *KRAS*, *TP53*, *BRCA1*, *PIK3CA*) and 1 benign control.
+- **[`mixed_profile.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/mixed_profile.vcf)** — Mixed clinical profile containing 2 pathogenic variants (*BRAF*, *CFTR*) and 4 benign polymorphisms (*COMT*, *ACTN3*, *MCM6*, *MTHFR*).
+- **[`backend/test_data/SIH_Live_Demo.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/backend/test_data/SIH_Live_Demo.vcf)** — Curated dataset generated for live hackathon presentations and clinical demonstrations.
+
 ### Testing in 3 Steps:
-1. Drag and drop `sample_patient.vcf` into the **Analyze a VCF** hero box (or click **Download sample VCF** in the web interface).
+1. Drag and drop [`sample_patient.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/sample_patient.vcf) into the **Analyze a VCF** hero box (or click **Download sample VCF** in the web interface).
 2. Click **Run Analysis** to execute automated annotation and ML classification.
-3. Review the results in the **Variant Analysis Table**, click any row to open the **Variant Inspector**, and click **Export PDF Report** for a formatted clinical review document.
+3. Review results in the **Variant Analysis Table**, click any row to open the **Variant Inspector**, and click **Export PDF Report** for a formatted clinical review document.
 

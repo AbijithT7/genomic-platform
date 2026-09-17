@@ -54,24 +54,18 @@ function generateVcfContent() {
 function main() {
   const content = generateVcfContent();
   
-  // Output targets
+  // Output target
   const rootDir = path.resolve(__dirname, '..');
-  const targetPaths = [
-    path.join(rootDir, 'SIH_Live_Demo.vcf'),
-    path.join(rootDir, 'scripts', 'SIH_Live_Demo.vcf'),
-    path.join(rootDir, 'backend', 'test_data', 'SIH_Live_Demo.vcf')
-  ];
+  const targetPath = path.join(rootDir, 'backend', 'test_data', 'SIH_Live_Demo.vcf');
 
-  // Ensure directories exist
-  const backendTestDataDir = path.join(rootDir, 'backend', 'test_data');
+  // Ensure directory exists
+  const backendTestDataDir = path.dirname(targetPath);
   if (!fs.existsSync(backendTestDataDir)) {
     fs.mkdirSync(backendTestDataDir, { recursive: true });
   }
 
-  targetPaths.forEach(targetPath => {
-    fs.writeFileSync(targetPath, content, 'utf8');
-    console.log(`[SUCCESS] Generated: ${targetPath}`);
-  });
+  fs.writeFileSync(targetPath, content, 'utf8');
+  console.log(`[SUCCESS] Generated: ${targetPath}`);
 
   console.log('\n--- VCF Summary ---');
   console.log('Total Variants: 10');
