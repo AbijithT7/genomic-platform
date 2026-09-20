@@ -1,4 +1,4 @@
-# GENOMIX — Genomic Intelligence & Variant Interpretation Platform
+# GENOMIX - Genomic Intelligence & Variant Interpretation Platform
 
 An end-to-end clinical genomics platform for automated genomic variant interpretation. GENOMIX combines stream-based VCF ingestion, multi-tiered clinical annotation (MyVariant.info, Ensembl, and ClinVar), a Random Forest ML pathogenicity classifier trained on real ClinVar data with feature explanations, curated gene-disease mappings, and a scientific bioinformatics web dashboard with publication-ready clinical PDF report export.
 
@@ -8,11 +8,14 @@ An end-to-end clinical genomics platform for automated genomic variant interpret
 
 - [Authors & Contributors](#authors--contributors)
 - [System Architecture](#system-architecture)
+- [Live Deployment](#live-deployment)
 - [Primary Clinical Workflow](#primary-clinical-workflow)
 - [Key Features](#key-features)
 - [Machine Learning & Decision Boundaries](#machine-learning--decision-boundaries)
 - [User Interface & Workspace Navigation](#user-interface--workspace-navigation)
 - [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Deployment](#deployment)
 - [Project Structure](#project-structure)
 - [Database Models](#database-models)
 - [API Reference](#api-reference)
@@ -28,44 +31,71 @@ Developed by students from **Vellore Institute of Technology (VIT), Chennai**:
 | :--- | :--- | :--- |
 | **Abijith Thennarasu** | Fullstack Architecture, ML Microservice & Pipeline | Vellore Institute of Technology (VIT), Chennai |
 | **Alvin Binoy** | Bioinformatics Pipeline & Data Engineering | Vellore Institute of Technology (VIT), Chennai |
-| **Caleb Kurian George** | Clinical Annotation & Frontend Systems | Vellore Institute of Technology (VIT), Chennai |
+| **Caleb Kurian George** | Clinical Annotation, Frontend Systems and Live Hosting | Vellore Institute of Technology (VIT), Chennai |
 
 ---
 
 ## System Architecture
 
+GENOMIX is deployed as a three-service application:
+
+```text
+              ┌──────────────────────────────────────┐
+              │                Vercel                │
+              │        React + Vite Frontend         │
+              │          Public web dashboard        │
+              └──────────────────┬───────────────────┘
+                                 │
+                           HTTPS REST API
+                                 │
+                                 ▼
+              ┌──────────────────────────────────────┐
+              │                Render                │
+              │       Node.js + Express Backend      │
+              │       VCF ingestion and pipeline     │
+              └──────────────────┬───────────────────┘
+                                 │
+                            HTTPS /predict
+                                 │
+                                 ▼
+              ┌───────────────────────────────────────┐
+              │                Render                 │
+              │        Python FastAPI ML Service      │
+              │         Random Forest predictions     │
+              └──────────────────┬────────────────────┘
+                                 │
+                          Database queries
+                                 │
+                                 ▼
+              ┌──────────────────────────────────────┐
+              │               Supabase               │
+              │        Managed PostgreSQL Database   │
+              │              Prisma ORM              │
+              └──────────────────────────────────────┘
+                        
 ```
-[ React + Vite Client (Port 5173) ]
-   │
-   ├── 1. POST /api/upload (VCF Stream Ingestion) ──────────────────> [ Node.js Express Server (Port 3001) ]
-   │                                                                     ├── Line-by-line stream parser (services/vcfParser.js)
-   │                                                                     ├── Extracts genome build (hg19/GRCh37 vs hg38/GRCh38)
-   │                                                                     ├── Extracts rsIDs, REF/ALT, INFO tags (GENE, CLNDN, AF, CADD)
-   │                                                                     ├── Creates Patient record & bulk-inserts Variants (status: pending)
-   │                                                                     └── Returns { patientId, filename, totalVariants, patient }
-   │
-   ├── 2. POST /api/analyze/:patientId (Clinical Annotation & ML) ──> [ Node.js Express Server (Port 3001) ]
-   │                                                                     ├── Multi-tiered feature annotation (services/annotationService.js):
-   │                                                                     │     1. MyVariant.info queries across hg19 & hg38
-   │                                                                     │     2. Ensembl REST API fallback (grch37 / rest.ensembl.org)
-   │                                                                     │     3. Local ClinVar & CADD cached datasets
-   │                                                                     │     4. Direct VCF INFO tag fallback (AF, CADD, GENE, CLNSIG)
-   │                                                                     ├── Non-Imputation Data Policy:
-   │                                                                     │     • No false zero-fill defaults for AF or CADD
-   │                                                                     │     • Missing features classified transparently as VUS
-   │                                                                     ├── Batches numerical features to Python FastAPI Service:
-   │                                                                     │     └── POST /predict (Port 8000) -> { ml_score, classification, shap_explanation }
-   │                                                                     ├── Upserts Evidence in SQLite with nullable features & explanations
-   │                                                                     └── Classifies Variant status (Pathogenic, Benign, VUS)
-   │
-   └── 3. Scientific Workspace & Reporting
-         ├── Ingest VCF Hero with drag-and-drop & demo files
-         ├── Cohort summary metrics cards & classification distribution bar
-         ├── High-density Variant Analysis Table with real-time multi-field search
-         ├── Slide-out Variant Inspector with biological metrics & model narrative
-         ├── Dedicated "How It Works" educational walkthrough
-         └── Publication-ready Clinical PDF Review Report generation
-```
+
+### Request Flow
+
+1. **VCF Upload**: The Vercel-hosted frontend sends a multipart request to the Render-hosted Express backend.
+2. **VCF Ingestion**: The backend parses the VCF file, detects the genome build, extracts variant information, and stores patient and variant records in Supabase PostgreSQL through Prisma.
+3. **Clinical Annotation**: The backend retrieves annotation data from MyVariant.info and Ensembl, with local ClinVar/CADD and VCF INFO fallbacks.
+4. **Machine Learning**: The backend sends numerical features to the Render-hosted FastAPI service through `POST /predict`.
+5. **Persistence**: ML predictions and evidence are written back to Supabase.
+6. **Review and Reporting**: The frontend retrieves the processed results and provides filtering, variant inspection, and PDF report export.
+
+---
+
+## Live Deployment
+
+| Component | Hosting Provider |
+| :--- | :--- |
+| Frontend | Vercel | 
+| Backend API | Render |
+| ML Service | Render | 
+| Database | Supabase | 
+
+> **Note:** The frontend's ML status indicator checks the deployed ML health endpoint from the user's browser. Browser privacy tools, ad blockers, or extensions may block this request and cause the interface to display `Offline` even when the ML service itself is operational.
 
 ---
 
@@ -85,16 +115,16 @@ $$\text{Upload VCF} \longrightarrow \text{Run Analysis} \longrightarrow \text{Re
 
 ## Key Features
 
-- **Stream-Based VCF Ingestion** — Memory-safe line-by-line parser (`services/vcfParser.js`) supporting standard VCF v4.2+, rsIDs, genotype columns, and INFO tags (`GENE`, `CLNDN`, `CLNSIG`, `AF`, `CADD`).
-- **Dynamic Genome Assembly Awareness** — Automatically extracts reference assembly headers (`hg19`, `GRCh37`, `hg38`, `GRCh38`) and routes queries to the corresponding genomic coordinate space.
-- **Multi-Tiered Annotation Pipeline** — Automated resolution cascading through MyVariant.info, Ensembl REST APIs, local ClinVar & CADD lookup maps, and embedded VCF tags.
-- **Supervised Random Forest Classifier** — Trained on curated ClinVar-labelled variants with continuous CADD PHRED scores and population allele frequencies.
-- **Strict Non-Imputation Policy** — Missing annotations are never assigned synthetic `0.0` values. If a feature cannot be resolved, the variant is flagged as VUS with an explicit audit narrative.
-- **Feature-Based Model Narrative** — Plain-language explanations detailing how allele rarity and conservation scores influenced the classification.
-- **Curated Gene-Disease Knowledge Base** — Mappings for actionable and ACMG genes (*BRAF*, *BRCA1*, *BRCA2*, *TP53*, *KRAS*, *EGFR*, *PIK3CA*, *HFE*, *CFTR*, *MTHFR*).
-- **Working Real-Time Search** — Instant filtering across chromosome, coordinate position, REF, ALT, gene symbol, rsID, condition/phenotype, and classification status.
-- **High-Contrast Dark & Light Modes** — Accessible, readable contrast in both themes, featuring a subtle 3D molecular background texture and custom gene favicon.
-- **Clinical Review Report Export** — Vector PDF export with case metadata, priority findings, and clinical bioinformatics notes.
+- **Stream-Based VCF Ingestion**: Memory-safe line-by-line parser (`services/vcfParser.js`) supporting standard VCF v4.2+, rsIDs, genotype columns, and INFO tags (`GENE`, `CLNDN`, `CLNSIG`, `AF`, `CADD`).
+- **Dynamic Genome Assembly Awareness**: Automatically extracts reference assembly headers (`hg19`, `GRCh37`, `hg38`, `GRCh38`) and routes queries to the corresponding genomic coordinate space.
+- **Multi-Tiered Annotation Pipeline**: Automated resolution cascading through MyVariant.info, Ensembl REST APIs, local ClinVar & CADD lookup maps, and embedded VCF tags.
+- **Supervised Random Forest Classifier**: Trained on curated ClinVar-labelled variants with continuous CADD PHRED scores and population allele frequencies.
+- **Strict Non-Imputation Policy**: Missing annotations are never assigned synthetic `0.0` values. If a feature cannot be resolved, the variant is flagged as VUS with an explicit audit narrative.
+- **Feature-Based Model Narrative**: Plain-language explanations detailing how allele rarity and conservation scores influenced the classification.
+- **Curated Gene-Disease Knowledge Base**: Mappings for actionable and ACMG genes (*BRAF*, *BRCA1*, *BRCA2*, *TP53*, *KRAS*, *EGFR*, *PIK3CA*, *HFE*, *CFTR*, *MTHFR*).
+- **Working Real-Time Search**: Instant filtering across chromosome, coordinate position, REF, ALT, gene symbol, rsID, condition/phenotype, and classification status.
+- **High-Contrast Dark & Light Modes**: Accessible, readable contrast in both themes, featuring a subtle 3D molecular background texture and custom gene favicon.
+- **Clinical Review Report Export**: Vector PDF export with case metadata, priority findings, and clinical bioinformatics notes.
 
 ---
 
@@ -138,7 +168,7 @@ $$\text{Upload VCF} \longrightarrow \text{Run Analysis} \longrightarrow \text{Re
 
 ## Quick Start
 
-You will need three terminals to run the platform locally:
+You will need three terminals to run the platform **locally**:
 
 ### 1. Python ML Service (Port 8000)
 
@@ -182,12 +212,85 @@ Open **`http://localhost:5173`** in your browser.
 
 ---
 
+## Environment Variables
+
+### Frontend
+
+For the deployed frontend, the backend API URL is configured in Vercel:
+
+```env
+VITE_API_URL=https://genomix-backend.onrender.com/api
+```
+
+The frontend currently checks the deployed ML service using:
+
+```text
+https://genomix-ml-service.onrender.com/health
+```
+
+If the ML URL is later moved back to configuration, use the Vite-exposed variable name:
+
+```env
+VITE_ML_SERVICE_URL=https://genomix-ml-service.onrender.com
+```
+
+> Vite variables must begin with `VITE_` to be available in browser-side code. After changing a Vercel environment variable, trigger a new deployment because the value is embedded at build time.
+
+### Backend
+
+The Render backend should contain the ML service URL and the Supabase PostgreSQL connection string:
+
+```env
+ML_SERVICE_URL=https://genomix-ml-service.onrender.com
+DATABASE_URL=<your Supabase pooled or direct PostgreSQL connection string>
+DIRECT_URL=<your Supabase direct PostgreSQL connection string, if required by Prisma>
+```
+
+Do not commit `.env` files, database passwords, API keys, or other secrets to the repository.
+
+---
+
+## Deployment
+
+### Frontend — Vercel
+
+1. Import the repository into Vercel.
+2. Set the frontend root directory to `frontend` if the repository is configured as a monorepo.
+3. Configure the required Vite environment variables.
+4. Build the frontend using the project's Vite build command.
+5. Deploy and verify that the frontend calls the Render backend rather than `localhost`.
+
+### Backend — Render
+
+1. Create a Render Web Service for the `backend` directory.
+2. Install dependencies with `npm install`.
+3. Run Prisma generation and database setup as required by the deployment configuration.
+4. Start the Express server using the production start command.
+5. Add `ML_SERVICE_URL` and the Supabase database variables in Render's environment settings.
+6. Verify the backend health endpoint.
+
+### ML Service — Render
+
+1. Create a Render Web Service for the `ml-service` directory.
+2. Install Python dependencies from `requirements.txt`.
+3. Start FastAPI with Uvicorn, binding to `0.0.0.0` and Render's provided `$PORT`.
+4. Confirm that `model.pkl` is available in the deployed service.
+5. Verify `/health`, `/model-info`, and `/docs`.
+6. Confirm that the backend can reach the ML service through `ML_SERVICE_URL`.
+
+### Database — Supabase
+
+1. Create a PostgreSQL project in Supabase.
+2. Copy the appropriate connection string into the backend's Render environment variables.
+3. Run Prisma database synchronization or migrations from the backend project.
+4. Confirm that patient, variant, and evidence records persist after deployment.
+
 ## Project Structure
 
 ```
 genomic_platform/
-├── backend/                       # Node.js + Express API server (Port 3001)
-│   ├── prisma/                    # Prisma SQLite schema & migrations
+├── backend/                       # Node.js + Express API server
+│   ├── prisma/                    # Prisma schema and database configuration
 │   │   ├── schema.prisma          # Patient, Variant, Evidence relational models
 │   │   └── seed.js                # Database seeding script
 │   ├── routes/                    # API route controllers
@@ -201,11 +304,11 @@ genomic_platform/
 │   │   └── SIH_Live_Demo.vcf      # 10-variant live hackathon presentation dataset
 │   ├── uploads/                   # Staged upload directory (.gitkeep)
 │   ├── server.js                  # Express application entry point
-│   ├── test-db.js                 # Prisma SQLite database verification script
+│   ├── test-db.js                 # Prisma database verification script
 │   ├── test-pipeline.js           # End-to-end annotation & ML test script
 │   └── test-upload.js             # Multipart upload verification script
 │
-├── frontend/                      # React 19 + Vite client dashboard (Port 5173)
+├── frontend/                      # React 19 + Vite client dashboard
 │   ├── public/                    # Static assets
 │   │   ├── favicon.svg            # Custom DNA double-helix SVG favicon
 │   │   └── dna-helix.png          # High-resolution molecular background asset
@@ -223,7 +326,7 @@ genomic_platform/
 │       ├── index.css              # Design system styling & high-contrast themes
 │       └── main.jsx               # React DOM application mount point
 │
-├── ml-service/                    # Python FastAPI machine learning microservice (Port 8000)
+├── ml-service/                    # Python FastAPI machine learning microservice
 │   ├── data/                      # Training datasets & CADD PHRED lookup caches
 │   │   ├── model_training_data.csv# Curated ClinVar training dataset
 │   │   └── cadd_results.tsv.gz    # Compressed CADD PHRED score cache
@@ -253,7 +356,7 @@ genomic_platform/
 
 ## Database Models
 
-Managed via Prisma (`backend/prisma/schema.prisma`):
+Managed through Prisma (`backend/prisma/schema.prisma`) and hosted in Supabase PostgreSQL:
 
 ```prisma
 model Patient {
@@ -296,11 +399,11 @@ model Evidence {
 
 ## API Reference
 
-### Express API — `http://localhost:3001`
+### Express API — Local: `http://localhost:3001`  |  Production: `https://genomix-backend.onrender.com`
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/health` | Backend and SQLite connectivity check |
+| `GET` | `/api/health` | Backend and PostgreSQL connectivity check |
 | `POST` | `/api/upload` | Multipart `.vcf` upload, assembly detection, and stream ingestion |
 | `POST` | `/api/analyze/:patientId` | Triggers annotation and ML prediction pipeline for cohort |
 | `GET` | `/api/patients` | List all patient records with nested variants and evidence |
@@ -310,7 +413,7 @@ model Evidence {
 | `GET` | `/api/variants` | Query variants with filters (`?patientId=`, `?chrom=`, `?status=`) |
 | `GET` | `/api/evidence/variant/:variantId` | Fetch evidence and feature explanations for a variant |
 
-### Python ML Service — `http://localhost:8000`
+### Python ML Service — Local: `http://localhost:8000`  |  Production: `https://genomix-ml-service.onrender.com`
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
@@ -324,7 +427,7 @@ model Evidence {
 
 The repository includes curated, production-grade test VCF files designed to validate clinical classification accuracy across oncology, rare disease, carrier status, and benign polymorphisms:
 
-### 1. Primary Test Profile — [`sample_patient.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/sample_patient.vcf)
+### 1. Primary Test Profile — [`sample_patient.vcf`](./sample_patient.vcf)
 A comprehensive 10-variant profile covering actionable oncogenes, cystic fibrosis carrier status, and diverse benign polymorphisms:
 
 | Variant Coordinate | Gene | Associated Clinical Condition | ClinVar Assertion | Expected Status |
@@ -341,12 +444,12 @@ A comprehensive 10-variant profile covering actionable oncogenes, cystic fibrosi
 | `chr11:66560624 C>T` | *ACTN3* | Athletic Performance Polymorphism | Benign | **Benign** (Score: ~0.000) |
 
 ### 2. Specialized Profiles
-- **[`heavy_pathogenic.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/heavy_pathogenic.vcf)** — High-risk cancer profile containing 5 high-penetrance oncogenic variants (*BRAF*, *KRAS*, *TP53*, *BRCA1*, *PIK3CA*) and 1 benign control.
-- **[`mixed_profile.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/mixed_profile.vcf)** — Mixed clinical profile containing 2 pathogenic variants (*BRAF*, *CFTR*) and 4 benign polymorphisms (*COMT*, *ACTN3*, *MCM6*, *MTHFR*).
-- **[`backend/test_data/SIH_Live_Demo.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/backend/test_data/SIH_Live_Demo.vcf)** — Curated dataset generated for live hackathon presentations and clinical demonstrations.
+- **[`heavy_pathogenic.vcf`](./heavy_pathogenic.vcf)** — High-risk cancer profile containing 5 high-penetrance oncogenic variants (*BRAF*, *KRAS*, *TP53*, *BRCA1*, *PIK3CA*) and 1 benign control.
+- **[`mixed_profile.vcf`](./mixed_profile.vcf)** — Mixed clinical profile containing 2 pathogenic variants (*BRAF*, *CFTR*) and 4 benign polymorphisms (*COMT*, *ACTN3*, *MCM6*, *MTHFR*).
+- **[`backend/test_data/SIH_Live_Demo.vcf`](./backend/test_data/SIH_Live_Demo.vcf)** — Curated dataset generated for live hackathon presentations and clinical demonstrations.
 
 ### Testing in 3 Steps:
-1. Drag and drop [`sample_patient.vcf`](file:///C:/Users/abijith/Desktop/genomic_platform/sample_patient.vcf) into the **Analyze a VCF** hero box (or click **Download sample VCF** in the web interface).
+1. Drag and drop [`sample_patient.vcf`](./sample_patient.vcf) into the **Analyze a VCF** hero box (or click **Download sample VCF** in the web interface).
 2. Click **Run Analysis** to execute automated annotation and ML classification.
 3. Review results in the **Variant Analysis Table**, click any row to open the **Variant Inspector**, and click **Export PDF Report** for a formatted clinical review document.
 
