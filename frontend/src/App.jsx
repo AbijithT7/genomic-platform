@@ -78,7 +78,9 @@ export default function App() {
 
       // Check ML service on port 8000
       try {
-        const res = await fetch("http://127.0.0.1:8000/health");
+        const res = await fetch(
+        `${import.meta.env.VITE_ML_SERVICE_URL || "http://127.0.0.1:8000"}/health`
+  );
         if (res.ok) {
           setMlServiceStatus("ready");
         } else {
