@@ -76,10 +76,10 @@ export default function App() {
         setBackendStatus("disconnected");
       }
 
-      // Check ML service on port 8000
+      // Check ML service health 
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_ML_SERVICE_URL}/health`
+          "https://genomix-ml-service.onrender.com/health"
         );
         if (res.ok) {
           setMlServiceStatus("ready");
