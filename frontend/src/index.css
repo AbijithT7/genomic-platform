@@ -12,6 +12,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -24,6 +27,16 @@
       Roboto,
       sans-serif;
     line-height: 1.5;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   /* Custom Clean Scrollbar */

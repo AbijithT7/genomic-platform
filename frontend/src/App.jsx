@@ -60,6 +60,31 @@ export default function App() {
     window.localStorage.setItem("gp-theme", theme);
   }, [theme]);
 
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
+  // Handle ESC key to close mobile drawer or modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+        setActiveModal(null);
+        setSelectedVariant(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   // Check backend & ML service status
   useEffect(() => {
     const checkServices = async () => {
@@ -240,6 +265,7 @@ export default function App() {
 
   const navigateTo = (nav) => {
     setActiveNav(nav);
+    setMobileMenuOpen(false);
     if (nav === "analyze") {
       uploadSectionRef.current?.scrollIntoView({ behavior: "smooth" });
     } else if (nav === "overview") {
@@ -275,27 +301,25 @@ export default function App() {
       {/* MOBILE OVERLAY */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity duration-300"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* REFINED SCIENTIFIC SIDEBAR (desktop) / DRAWER (mobile) */}
       <aside
-        className={`lg:flex w-60 flex-shrink-0 flex-col justify-between border-r z-30 transition-colors relative overflow-hidden ${
-          mobileMenuOpen
-            ? "fixed inset-0 z-50 flex w-[82%] max-w-[300px] h-screen translate-x-0"
-            : "-translate-x-full lg:translate-x-0"
+        className={`fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] flex flex-col justify-between border-r transition-transform duration-300 ease-in-out lg:static lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:translate-x-0 lg:z-30 lg:flex-shrink-0 overflow-y-auto ${
+          mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
         } ${
           isLight ? "border-slate-300 bg-white" : "border-slate-800 bg-[#080d18]"
-        } lg:sticky lg:top-0 lg:h-screen`}
+        }`}
       >
         <button
           onClick={() => setMobileMenuOpen(false)}
-          className={`lg:hidden absolute top-3 right-3 p-1.5 rounded-md border transition-colors z-10 ${
+          className={`lg:hidden absolute top-3 right-3 p-1.5 rounded-md border transition-colors z-20 ${
             isLight
-              ? "text-slate-500 hover:text-slate-800 border-slate-300"
-              : "text-slate-400 hover:text-white border-slate-700"
+              ? "text-slate-500 hover:text-slate-800 border-slate-300 bg-white"
+              : "text-slate-400 hover:text-white border-slate-700 bg-[#0c1220]"
           }`}
           aria-label="Close menu"
         >
@@ -567,14 +591,10 @@ export default function App() {
       </aside>
 
       {/* MAIN APPLICATION WORKSPACE */}
-      <div
-        className={`flex-1 flex flex-col min-w-0 relative z-10 transition-[margin] duration-200 ${
-          mobileMenuOpen ? "ml-[82%]" : "ml-0"
-        }`}
-      >
+      <div className="flex-1 flex flex-col min-w-0 relative z-10 w-full overflow-x-hidden">
         {/* TOP COMPACT CASE BAR */}
         <header
-          className={`sticky top-0 z-20 px-3 sm:px-6 py-2 border-b transition-colors flex flex-wrap items-center justify-between gap-2 sm:gap-4 ${
+          className={`sticky top-0 z-20 px-3 sm:px-6 py-2 sm:py-2.5 border-b transition-colors flex items-center justify-between gap-2 sm:gap-4 ${
             isLight
               ? "bg-white border-slate-300 shadow-xs"
               : "bg-[#080d18]/95 border-slate-800 backdrop-blur-xs"
@@ -583,14 +603,14 @@ export default function App() {
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex-shrink-0"
+              className="lg:hidden p-1.5 -ml-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 flex-shrink-0 transition-colors"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
               <span
-                className={`font-mono text-xs sm:text-sm font-semibold truncate ${
+                className={`font-mono text-xs sm:text-sm font-semibold truncate max-w-[140px] sm:max-w-none ${
                   isLight ? "text-slate-900" : "text-slate-100"
                 }`}
               >
@@ -598,7 +618,7 @@ export default function App() {
               </span>
               {patient && (
                 <span
-                  className={`font-mono text-[10px] sm:text-[11px] hidden xs:inline ${
+                  className={`font-mono text-[10px] sm:text-[11px] hidden md:inline flex-shrink-0 ${
                     isLight ? "text-slate-600" : "text-slate-400"
                   }`}
                 >
@@ -609,7 +629,7 @@ export default function App() {
           </div>
 
           {/* Unified Working Search Bar */}
-          <div className="flex-1 min-w-[180px] max-w-sm hidden sm:block">
+          <div className="flex-1 min-w-[180px] max-w-sm hidden md:block">
             <div className="relative">
               <Search
                 size={13}
@@ -642,16 +662,17 @@ export default function App() {
           </div>
 
           {/* Right Header Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             {recentPatients.length > 1 && (
               <select
                 value={patient?.id || ""}
                 onChange={(e) => handleSelectRecentPatient(e.target.value)}
-                className={`text-xs rounded border px-2 py-1 font-mono focus:outline-none focus:border-cyan-500 ${
+                className={`text-xs rounded border px-2 py-1 font-mono focus:outline-none focus:border-cyan-500 max-w-[105px] sm:max-w-[170px] truncate ${
                   isLight
                     ? "bg-white border-slate-300 text-slate-900"
                     : "bg-[#0c1220] border-slate-700 text-slate-200"
                 }`}
+                title="Select patient"
               >
                 {recentPatients.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -665,7 +686,7 @@ export default function App() {
               <button
                 onClick={handleAnalyze}
                 disabled={analyzing}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-50 ${
+                className={`inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-semibold transition-colors disabled:opacity-50 flex-shrink-0 ${
                   isLight
                     ? "bg-cyan-600 hover:bg-cyan-700 text-white"
                     : "bg-cyan-500 hover:bg-cyan-400 text-slate-950"
@@ -674,21 +695,36 @@ export default function App() {
                 {analyzing ? (
                   <>
                     <Loader2 size={13} className="animate-spin" />
-                    <span>Analyzing...</span>
+                    <span className="hidden sm:inline">Analyzing...</span>
+                    <span className="sm:hidden">Run...</span>
                   </>
                 ) : (
                   <>
-                    <Play size={13} className="fill-current" />
-                    <span>{analysisReady ? "Re-analyze" : "Run Analysis"}</span>
+                    <Play size={12} className="fill-current" />
+                    <span>{analysisReady ? "Re-analyze" : "Analyze"}</span>
                   </>
                 )}
               </button>
             )}
+
+            {/* Quick theme toggle for mobile */}
+            <button
+              onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+              className={`p-1.5 rounded border transition-colors lg:hidden ${
+                isLight
+                  ? "border-slate-300 text-slate-600 hover:text-slate-900 bg-white"
+                  : "border-slate-700 text-slate-400 hover:text-white bg-[#0c1220]"
+              }`}
+              title="Toggle theme"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun size={13} /> : <Moon size={13} />}
+            </button>
           </div>
         </header>
 
         {/* WORKSPACE CONTENT CONTAINER */}
-        <main className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <main className="p-3.5 sm:p-6 space-y-5 sm:space-y-6 max-w-7xl mx-auto w-full min-w-0">
           {/* STEP 1: INGEST VCF AT TOP OF HOME PAGE */}
           <section ref={uploadSectionRef} data-purpose="hero-ingestion">
             <FileUpload onUploadSuccess={handleUploadSuccess} theme={theme} />
@@ -745,67 +781,67 @@ export default function App() {
                 </div>
 
                 {/* 4 Clean Statistics Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                   <div
-                    className={`rounded-lg p-3.5 border transition-colors ${
+                    className={`rounded-lg p-3 sm:p-3.5 border transition-colors ${
                       isLight ? "bg-white border-slate-300 shadow-xs" : "bg-[#0c111d] border-slate-800"
                     }`}
                   >
-                    <div className={`text-xs font-medium ${isLight ? "text-slate-600" : "text-slate-400"}`}>
+                    <div className={`text-[11px] sm:text-xs font-medium ${isLight ? "text-slate-600" : "text-slate-400"}`}>
                       Total Variants
                     </div>
-                    <div className={`text-2xl font-mono font-bold mt-1 ${isLight ? "text-slate-900" : "text-white"}`}>
+                    <div className={`text-xl sm:text-2xl font-mono font-bold mt-1 ${isLight ? "text-slate-900" : "text-white"}`}>
                       {totalCount}
                     </div>
-                    <div className={`text-[11px] mt-1 font-mono ${isLight ? "text-slate-500" : "text-slate-400"}`}>
+                    <div className={`text-[10px] sm:text-[11px] mt-1 font-mono truncate ${isLight ? "text-slate-500" : "text-slate-400"}`}>
                       {analyzedCount}/{totalCount} interpreted
                     </div>
                   </div>
 
                   <div
-                    className={`rounded-lg p-3.5 border transition-colors ${
+                    className={`rounded-lg p-3 sm:p-3.5 border transition-colors ${
                       isLight ? "bg-white border-slate-300 shadow-xs" : "bg-[#0c111d] border-slate-800"
                     }`}
                   >
-                    <div className={`text-xs font-semibold ${isLight ? "text-rose-700" : "text-rose-400"}`}>
+                    <div className={`text-[11px] sm:text-xs font-semibold ${isLight ? "text-rose-700" : "text-rose-400"}`}>
                       Pathogenic
                     </div>
-                    <div className={`text-2xl font-mono font-bold mt-1 ${isLight ? "text-rose-700" : "text-rose-400"}`}>
+                    <div className={`text-xl sm:text-2xl font-mono font-bold mt-1 ${isLight ? "text-rose-700" : "text-rose-400"}`}>
                       {pathogenicCount}
                     </div>
-                    <div className={`text-[11px] mt-1 ${isLight ? "text-rose-600" : "text-rose-300"}`}>
+                    <div className={`text-[10px] sm:text-[11px] mt-1 truncate ${isLight ? "text-rose-600" : "text-rose-300"}`}>
                       Score &gt;= 0.80 ({pathogenicPct}%)
                     </div>
                   </div>
 
                   <div
-                    className={`rounded-lg p-3.5 border transition-colors ${
+                    className={`rounded-lg p-3 sm:p-3.5 border transition-colors ${
                       isLight ? "bg-white border-slate-300 shadow-xs" : "bg-[#0c111d] border-slate-800"
                     }`}
                   >
-                    <div className={`text-xs font-semibold ${isLight ? "text-purple-700" : "text-purple-400"}`}>
+                    <div className={`text-[11px] sm:text-xs font-semibold ${isLight ? "text-purple-700" : "text-purple-400"}`}>
                       VUS
                     </div>
-                    <div className={`text-2xl font-mono font-bold mt-1 ${isLight ? "text-purple-700" : "text-purple-400"}`}>
+                    <div className={`text-xl sm:text-2xl font-mono font-bold mt-1 ${isLight ? "text-purple-700" : "text-purple-400"}`}>
                       {vusCount}
                     </div>
-                    <div className={`text-[11px] mt-1 ${isLight ? "text-purple-600" : "text-purple-300"}`}>
+                    <div className={`text-[10px] sm:text-[11px] mt-1 truncate ${isLight ? "text-purple-600" : "text-purple-300"}`}>
                       0.20 – 0.79 ({vusPct}%)
                     </div>
                   </div>
 
                   <div
-                    className={`rounded-lg p-3.5 border transition-colors ${
+                    className={`rounded-lg p-3 sm:p-3.5 border transition-colors ${
                       isLight ? "bg-white border-slate-300 shadow-xs" : "bg-[#0c111d] border-slate-800"
                     }`}
                   >
-                    <div className={`text-xs font-semibold ${isLight ? "text-emerald-700" : "text-emerald-400"}`}>
+                    <div className={`text-[11px] sm:text-xs font-semibold ${isLight ? "text-emerald-700" : "text-emerald-400"}`}>
                       Benign
                     </div>
-                    <div className={`text-2xl font-mono font-bold mt-1 ${isLight ? "text-emerald-700" : "text-emerald-400"}`}>
+                    <div className={`text-xl sm:text-2xl font-mono font-bold mt-1 ${isLight ? "text-emerald-700" : "text-emerald-400"}`}>
                       {benignCount}
                     </div>
-                    <div className={`text-[11px] mt-1 ${isLight ? "text-emerald-600" : "text-emerald-300"}`}>
+                    <div className={`text-[10px] sm:text-[11px] mt-1 truncate ${isLight ? "text-emerald-600" : "text-emerald-300"}`}>
                       Score &lt; 0.20 ({benignPct}%)
                     </div>
                   </div>
@@ -813,15 +849,15 @@ export default function App() {
 
                 {/* Risk Distribution Bar */}
                 <div
-                  className={`rounded-lg p-3.5 border ${
+                  className={`rounded-lg p-3 sm:p-3.5 border ${
                     isLight ? "bg-white border-slate-300 shadow-xs" : "bg-[#0c111d] border-slate-800"
                   }`}
                 >
-                  <div className="flex items-center justify-between text-xs mb-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 text-xs mb-2">
                     <span className={`font-semibold ${isLight ? "text-slate-900" : "text-slate-100"}`}>
                       Classification Distribution
                     </span>
-                    <div className="flex items-center gap-3 font-mono text-[11px]">
+                    <div className="flex items-center gap-2 sm:gap-3 font-mono text-[10px] sm:text-[11px] flex-wrap">
                       <span className={isLight ? "text-rose-700 font-bold" : "text-rose-400 font-semibold"}>
                         {pathogenicCount} Pathogenic
                       </span>
@@ -969,7 +1005,7 @@ export default function App() {
                 <p className={`m-0 ${isLight ? "text-slate-700" : "text-slate-300"}`}>
                   A trained Random Forest model examines the variant's population frequency and CADD score to calculate an <strong>ML Risk Score</strong> from 0.0 to 1.0:
                 </p>
-                <div className="grid grid-cols-3 gap-2 mt-2 font-mono text-[11px]">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2 font-mono text-[11px]">
                   <div className={`p-2 rounded border ${isLight ? "bg-rose-50 border-rose-200 text-rose-800 font-semibold" : "bg-rose-950/40 border-rose-800 text-rose-300"}`}>
                     &gt;= 0.80: Pathogenic
                     <span className="block text-[10px] font-sans font-normal mt-0.5">High disease risk</span>

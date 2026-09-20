@@ -107,7 +107,7 @@ export default function FileUpload({ onUploadSuccess, theme = "dark" }) {
       {/* Uploaded active file banner */}
       {uploadResult && !error ? (
         <div
-          className={`rounded-lg p-5 border transition-colors flex items-center justify-between gap-4 ${
+          className={`rounded-lg p-4 sm:p-5 border transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
             isLight
               ? "bg-white border-slate-300 text-slate-900 shadow-sm"
               : "bg-[#0e1424] border-slate-800 text-slate-100"
@@ -125,7 +125,7 @@ export default function FileUpload({ onUploadSuccess, theme = "dark" }) {
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-sm font-semibold truncate">
+                <span className="font-mono text-xs sm:text-sm font-semibold truncate max-w-[200px] sm:max-w-none">
                   {file?.name || uploadResult.filename}
                 </span>
                 <span
@@ -150,7 +150,7 @@ export default function FileUpload({ onUploadSuccess, theme = "dark" }) {
 
           <button
             onClick={reset}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors flex-shrink-0 ${
+            className={`w-full sm:w-auto text-center px-3 py-1.5 text-xs font-medium rounded-md border transition-colors flex-shrink-0 ${
               isLight
                 ? "border-slate-300 text-slate-700 hover:text-slate-900 hover:bg-slate-100 bg-white"
                 : "border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 bg-[#0a0e17]"
@@ -166,7 +166,7 @@ export default function FileUpload({ onUploadSuccess, theme = "dark" }) {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onClick={() => inputRef.current?.click()}
-          className={`rounded-xl p-8 sm:p-10 text-center cursor-pointer transition-all border relative group ${
+          className={`rounded-xl p-6 sm:p-10 text-center cursor-pointer transition-all border relative group ${
             isDragging
               ? "border-cyan-500 ring-2 ring-cyan-500/20 bg-cyan-50"
               : error

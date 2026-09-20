@@ -215,12 +215,12 @@ export default function VariantTable({
     >
       {/* Search & Filter Toolbar */}
       <div
-        className={`p-3 border-b flex flex-wrap items-center justify-between gap-3 ${
+        className={`p-3 border-b flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 ${
           isLight ? "border-slate-200 bg-slate-50" : "border-slate-800 bg-[#0c111d]"
         }`}
       >
         {/* Search Bar */}
-        <div className="relative flex-1 min-w-[240px] max-w-md">
+        <div className="relative flex-1 min-w-0 max-w-md">
           <Search
             size={14}
             className={`absolute left-3 top-1/2 -translate-y-1/2 ${
@@ -253,7 +253,7 @@ export default function VariantTable({
         </div>
 
         {/* Status Filter Buttons */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span
             className={`text-xs flex items-center gap-1 mr-1 ${
               isLight ? "text-slate-600" : "text-slate-400"
@@ -283,6 +283,18 @@ export default function VariantTable({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Mobile Swipe Hint */}
+      <div
+        className={`sm:hidden px-3 py-1.5 border-b text-[11px] font-mono flex items-center justify-between ${
+          isLight
+            ? "bg-slate-50 text-slate-500 border-slate-200"
+            : "bg-[#090d18] text-slate-400 border-slate-800"
+        }`}
+      >
+        <span>Swipe horizontally for all fields</span>
+        <span>{filteredAndSorted.length} variants</span>
       </div>
 
       {/* Main Table */}
@@ -497,7 +509,7 @@ export default function VariantTable({
 
       {/* Footer statistics */}
       <div
-        className={`p-3 border-t flex items-center justify-between text-xs font-sans ${
+        className={`p-3 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-sans ${
           isLight
             ? "border-slate-300 bg-slate-50 text-slate-700"
             : "border-slate-800 bg-[#080d18] text-slate-400"
@@ -507,7 +519,7 @@ export default function VariantTable({
           Showing <span className={`font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>{filteredAndSorted.length}</span> of{" "}
           <span className={`font-semibold ${isLight ? "text-slate-900" : "text-white"}`}>{variants.length}</span> variants
         </div>
-        <div className="flex items-center gap-4 font-mono text-xs">
+        <div className="flex items-center gap-3 sm:gap-4 font-mono text-[11px] sm:text-xs flex-wrap">
           <span className={isLight ? "text-rose-700 font-semibold" : "text-rose-400 font-semibold"}>
             {variants.filter((v) => (v.status || "").toLowerCase() === "pathogenic").length} Pathogenic
           </span>

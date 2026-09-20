@@ -95,7 +95,7 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
 
       {/* Slide-out Inspector Panel */}
       <div
-        className={`fixed top-0 right-0 bottom-0 w-full max-w-lg z-50 flex flex-col shadow-2xl overflow-hidden border-l transition-colors ${
+        className={`fixed top-0 right-0 bottom-0 w-full sm:w-[500px] max-w-full z-50 flex flex-col shadow-2xl overflow-hidden border-l transition-colors ${
           isLight
             ? "bg-white border-slate-300 text-slate-900"
             : "bg-[#0b101c] border-slate-800 text-slate-100"
@@ -103,11 +103,11 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
       >
         {/* Header */}
         <div
-          className={`p-4 border-b flex items-start justify-between ${
+          className={`p-3.5 sm:p-4 border-b flex items-start justify-between gap-3 ${
             isLight ? "border-slate-300 bg-slate-50" : "border-slate-800 bg-[#090d18]"
           }`}
         >
-          <div>
+          <div className="min-w-0 flex-1">
             <div
               className={`text-xs font-semibold uppercase tracking-wider font-sans mb-1 ${
                 isLight ? "text-slate-600" : "text-slate-400"
@@ -116,7 +116,7 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
               Variant Inspector
             </div>
             <div
-              className={`font-mono text-base font-bold ${
+              className={`font-mono text-sm sm:text-base font-bold break-all ${
                 isLight ? "text-slate-900" : "text-white"
               }`}
             >
@@ -139,7 +139,7 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
 
           <button
             onClick={onClose}
-            className={`p-1.5 rounded-md border transition-colors ${
+            className={`p-1.5 rounded-md border transition-colors flex-shrink-0 ${
               isLight
                 ? "text-slate-600 hover:text-slate-900 hover:bg-slate-200 border-slate-300"
                 : "text-slate-400 hover:text-white hover:bg-slate-800 border-slate-700"
@@ -152,7 +152,7 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
 
         {/* Status bar */}
         <div
-          className={`px-4 py-2 border-b flex items-center justify-between text-xs ${
+          className={`px-3.5 sm:px-4 py-2 border-b flex items-center justify-between text-xs ${
             isLight ? "border-slate-200 bg-slate-100/70" : "border-slate-800 bg-[#0c1220]"
           }`}
         >
@@ -182,7 +182,7 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
 
         {/* Tabs */}
         <div
-          className={`flex items-center gap-5 px-4 border-b text-xs font-medium ${
+          className={`flex items-center gap-3 sm:gap-5 px-3 sm:px-4 border-b text-xs font-medium overflow-x-auto whitespace-nowrap scrollbar-none ${
             isLight ? "border-slate-200 bg-white" : "border-slate-800 bg-[#090d18]"
           }`}
         >
@@ -190,7 +190,7 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
             <button
               key={t}
               onClick={() => setActiveTab(t)}
-              className={`py-2.5 border-b-2 capitalize transition-colors ${
+              className={`py-2.5 border-b-2 capitalize transition-colors flex-shrink-0 ${
                 activeTab === t
                   ? isLight
                     ? "border-cyan-600 text-cyan-800 font-bold"
@@ -335,7 +335,7 @@ export default function EvidenceDrawer({ variant, onClose, theme = "dark" }) {
                       }`}
                     >
                       <dt className={isLight ? "text-slate-600" : "text-slate-400"}>ClinVar</dt>
-                      <dd className="font-medium text-right">
+                      <dd className="font-medium text-right break-words max-w-[65%]">
                         {clinVarNote || (isPathogenic ? "Pathogenic" : status === "benign" ? "Benign" : "—")}
                       </dd>
                     </div>
