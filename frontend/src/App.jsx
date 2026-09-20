@@ -272,12 +272,35 @@ export default function App() {
         />
       </div>
 
-      {/* REFINED SCIENTIFIC SIDEBAR */}
+      {/* MOBILE OVERLAY */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* REFINED SCIENTIFIC SIDEBAR (desktop) / DRAWER (mobile) */}
       <aside
-        className={`hidden lg:flex w-60 flex-shrink-0 flex-col justify-between border-r z-30 sticky top-0 h-screen transition-colors relative overflow-hidden ${
+        className={`lg:flex w-60 flex-shrink-0 flex-col justify-between border-r z-30 transition-colors relative overflow-hidden ${
+          mobileMenuOpen
+            ? "fixed inset-0 z-50 flex w-[82%] max-w-[300px] h-screen translate-x-0"
+            : "-translate-x-full lg:translate-x-0"
+        } ${
           isLight ? "border-slate-300 bg-white" : "border-slate-800 bg-[#080d18]"
-        }`}
+        } lg:sticky lg:top-0 lg:h-screen`}
       >
+        <button
+          onClick={() => setMobileMenuOpen(false)}
+          className={`lg:hidden absolute top-3 right-3 p-1.5 rounded-md border transition-colors z-10 ${
+            isLight
+              ? "text-slate-500 hover:text-slate-800 border-slate-300"
+              : "text-slate-400 hover:text-white border-slate-700"
+          }`}
+          aria-label="Close menu"
+        >
+          <X size={16} />
+        </button>
         {/* Subtle DNA background texture in sidebar */}
         <div className="absolute inset-0 pointer-events-none opacity-5 overflow-hidden">
           <img
@@ -544,25 +567,30 @@ export default function App() {
       </aside>
 
       {/* MAIN APPLICATION WORKSPACE */}
-      <div className="flex-1 flex flex-col min-w-0 relative z-10">
+      <div
+        className={`flex-1 flex flex-col min-w-0 relative z-10 transition-[margin] duration-200 ${
+          mobileMenuOpen ? "ml-[82%]" : "ml-0"
+        }`}
+      >
         {/* TOP COMPACT CASE BAR */}
         <header
-          className={`sticky top-0 z-20 px-4 sm:px-6 py-2.5 border-b transition-colors flex items-center justify-between gap-4 ${
+          className={`sticky top-0 z-20 px-3 sm:px-6 py-2 border-b transition-colors flex flex-wrap items-center justify-between gap-2 sm:gap-4 ${
             isLight
               ? "bg-white border-slate-300 shadow-xs"
               : "bg-[#080d18]/95 border-slate-800 backdrop-blur-xs"
           }`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              className="lg:hidden p-1.5 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex-shrink-0"
+              aria-label="Toggle menu"
             >
               {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
             <div className="flex items-center gap-2 min-w-0">
               <span
-                className={`font-mono text-xs font-semibold truncate ${
+                className={`font-mono text-xs sm:text-sm font-semibold truncate ${
                   isLight ? "text-slate-900" : "text-slate-100"
                 }`}
               >
@@ -570,7 +598,7 @@ export default function App() {
               </span>
               {patient && (
                 <span
-                  className={`font-mono text-[11px] hidden sm:inline ${
+                  className={`font-mono text-[10px] sm:text-[11px] hidden xs:inline ${
                     isLight ? "text-slate-600" : "text-slate-400"
                   }`}
                 >
@@ -581,7 +609,7 @@ export default function App() {
           </div>
 
           {/* Unified Working Search Bar */}
-          <div className="flex-1 max-w-sm hidden md:block">
+          <div className="flex-1 min-w-[180px] max-w-sm hidden sm:block">
             <div className="relative">
               <Search
                 size={13}
@@ -594,7 +622,7 @@ export default function App() {
                 value={searchTerm}
                 onChange={(e) => handleTopSearch(e.target.value)}
                 placeholder="Search chromosome, gene, rsID, condition..."
-                className={`w-full pl-8 pr-7 py-1 text-xs rounded-md border focus:outline-none focus:border-cyan-500 font-sans transition-colors ${
+                className={`w-full pl-8 pr-7 py-1.5 text-xs rounded-md border focus:outline-none focus:border-cyan-500 font-sans transition-colors ${
                   isLight
                     ? "bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400"
                     : "bg-[#0c1220] border-slate-700 text-slate-100 placeholder-slate-500"
@@ -614,7 +642,7 @@ export default function App() {
           </div>
 
           {/* Right Header Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {recentPatients.length > 1 && (
               <select
                 value={patient?.id || ""}
